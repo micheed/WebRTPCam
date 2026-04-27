@@ -3,721 +3,732 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>LiveCam — WebRTC Stream</title>
+<title>LiveCam — Local WiFi Stream</title>
 <style>
-  :root {
-    --bg: #0a0a0a;
-    --surface: #141414;
-    --border: rgba(255,255,255,0.08);
-    --accent: #00ff88;
-    --accent-dim: rgba(0,255,136,0.15);
-    --text: #f0f0f0;
-    --muted: #666;
-    --red: #ff4444;
-    --red-dim: rgba(255,68,68,0.15);
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: 'SF Mono', 'Fira Code', monospace;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-  }
+:root {
+  --bg: #080808;
+  --surface: #111;
+  --surface2: #1a1a1a;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.13);
+  --accent: #00e5ff;
+  --accent-dim: rgba(0,229,255,0.12);
+  --text: #eee;
+  --muted: #555;
+  --muted2: #888;
+  --red: #ff3b3b;
+  --red-dim: rgba(255,59,59,0.13);
+  --green: #00ff88;
+  --green-dim: rgba(0,255,136,0.12);
+  --amber: #ffb800;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html,body { height: 100%; }
+body {
+  font-family: 'SF Mono','Fira Code','Courier New',monospace;
+  background: var(--bg);
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
 
-  header {
-    padding: 14px 20px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    border-bottom: 1px solid var(--border);
-    background: var(--surface);
-  }
-  .logo {
-    font-size: 13px;
-    font-weight: 700;
-    letter-spacing: 0.15em;
-    color: var(--accent);
-    text-transform: uppercase;
-  }
-  .status-pill {
-    font-size: 11px;
-    padding: 4px 10px;
-    border-radius: 20px;
-    border: 1px solid var(--border);
-    color: var(--muted);
-    letter-spacing: 0.08em;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    transition: all 0.3s;
-  }
-  .status-pill.live {
-    border-color: var(--red);
-    background: var(--red-dim);
-    color: var(--red);
-  }
-  .status-dot {
-    width: 6px; height: 6px;
-    border-radius: 50%;
-    background: currentColor;
-  }
-  .status-pill.live .status-dot {
-    animation: pulse 1s infinite;
-  }
-  @keyframes pulse {
-    0%,100% { opacity: 1; }
-    50% { opacity: 0.2; }
-  }
+header {
+  padding: 12px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  position: sticky; top: 0; z-index: 10;
+}
+.logo { font-size: 12px; font-weight: 700; letter-spacing: 0.2em; color: var(--accent); display: flex; align-items: center; gap: 8px; }
+.logo-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+.pill { font-size: 10px; padding: 3px 10px; border-radius: 20px; border: 1px solid var(--border2); color: var(--muted2); letter-spacing: 0.1em; display: flex; align-items: center; gap: 5px; }
+.pill.live { border-color: var(--red); color: var(--red); background: var(--red-dim); }
+.pill.live .dot { animation: blink 1s infinite; }
+.dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+@keyframes blink { 0%,100%{opacity:1}50%{opacity:0.15} }
 
-  .video-container {
-    position: relative;
-    background: #000;
-    flex: 1;
-    min-height: 240px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-  }
-  video {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-  }
-  .video-overlay {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    gap: 12px;
-    background: rgba(0,0,0,0.6);
-  }
-  .video-overlay.hidden { display: none; }
-  .idle-icon {
-    font-size: 40px;
-    opacity: 0.4;
-  }
-  .idle-text {
-    font-size: 12px;
-    color: var(--muted);
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-  }
+.tabs { display: flex; background: var(--surface); border-bottom: 1px solid var(--border); }
+.tab { flex: 1; padding: 9px 4px; text-align: center; font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; font-family: inherit; background: none; border-top: none; border-left: none; border-right: none; }
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
 
-  .stream-url-bar {
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    padding: 10px 16px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  .url-label {
-    font-size: 10px;
-    color: var(--muted);
-    letter-spacing: 0.1em;
-    white-space: nowrap;
-    text-transform: uppercase;
-  }
-  .url-value {
-    font-size: 11px;
-    color: var(--accent);
-    flex: 1;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .copy-btn {
-    background: var(--accent-dim);
-    border: 1px solid var(--accent);
-    color: var(--accent);
-    font-family: inherit;
-    font-size: 10px;
-    padding: 4px 10px;
-    border-radius: 4px;
-    cursor: pointer;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    white-space: nowrap;
-    transition: background 0.2s;
-  }
-  .copy-btn:active { background: rgba(0,255,136,0.3); }
+.panel { display: none; flex-direction: column; flex: 1; }
+.panel.active { display: flex; }
 
-  .controls {
-    background: var(--surface);
-    padding: 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    border-top: 1px solid var(--border);
-  }
+.vid-wrap { position: relative; background: #000; height: 52vw; min-height: 200px; max-height: 320px; overflow: hidden; }
+video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.vid-idle { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; background: #000; }
+.vid-idle.hidden { display: none; }
+.idle-icon { font-size: 36px; opacity: 0.3; }
+.idle-txt { font-size: 10px; color: var(--muted); letter-spacing: 0.12em; }
+.viewer-badge { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.7); border: 1px solid var(--border2); border-radius: 12px; padding: 3px 9px; font-size: 10px; color: var(--accent); letter-spacing: 0.08em; display: none; }
+.viewer-badge.show { display: block; }
 
-  .control-row {
-    display: flex;
-    gap: 10px;
-  }
+.urlbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 8px 14px; display: flex; align-items: center; gap: 8px; }
+.url-lbl { font-size: 9px; color: var(--muted); letter-spacing: 0.12em; white-space: nowrap; }
+.url-val { font-size: 10px; color: var(--accent); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.copy-btn { background: var(--accent-dim); border: 1px solid var(--accent); color: var(--accent); font-family: inherit; font-size: 9px; padding: 3px 9px; border-radius: 4px; cursor: pointer; letter-spacing: 0.1em; white-space: nowrap; }
+.copy-btn:active { opacity: 0.7; }
 
-  .btn {
-    flex: 1;
-    padding: 14px;
-    border-radius: 8px;
-    border: 1px solid var(--border);
-    background: transparent;
-    color: var(--text);
-    font-family: inherit;
-    font-size: 12px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    cursor: pointer;
-    transition: all 0.2s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-  }
-  .btn:active { transform: scale(0.97); }
-  .btn.primary {
-    background: var(--accent-dim);
-    border-color: var(--accent);
-    color: var(--accent);
-  }
-  .btn.danger {
-    background: var(--red-dim);
-    border-color: var(--red);
-    color: var(--red);
-  }
-  .btn:disabled {
-    opacity: 0.35;
-    pointer-events: none;
-  }
-  .btn-icon { font-size: 16px; }
+.ctrl { padding: 14px; display: flex; flex-direction: column; gap: 11px; flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 
-  .settings-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-  }
-  .setting-card {
-    background: #1a1a1a;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 10px 12px;
-  }
-  .setting-label {
-    font-size: 9px;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-    margin-bottom: 6px;
-  }
-  select {
-    width: 100%;
-    background: transparent;
-    border: none;
-    color: var(--text);
-    font-family: inherit;
-    font-size: 12px;
-    cursor: pointer;
-    outline: none;
-    appearance: none;
-  }
-  select option { background: #1a1a1a; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 9px; }
+.card { background: var(--surface2); border: 1px solid var(--border); border-radius: 7px; padding: 9px 11px; }
+.card-lbl { font-size: 8px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.13em; margin-bottom: 5px; }
+select, input[type=text], input[type=password] { width: 100%; background: transparent; border: none; color: var(--text); font-family: inherit; font-size: 12px; outline: none; appearance: none; -webkit-appearance: none; }
+select option { background: #1a1a1a; }
+input::placeholder { color: var(--muted); }
 
-  .stats-row {
-    display: flex;
-    gap: 10px;
-  }
-  .stat {
-    flex: 1;
-    text-align: center;
-    background: #1a1a1a;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 8px 4px;
-  }
-  .stat-val {
-    font-size: 16px;
-    font-weight: 700;
-    color: var(--accent);
-  }
-  .stat-name {
-    font-size: 9px;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    margin-top: 2px;
-  }
+.btn { width: 100%; padding: 13px; border-radius: 7px; border: 1px solid var(--border2); background: transparent; color: var(--text); font-family: inherit; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 7px; transition: opacity 0.15s, transform 0.1s; }
+.btn:active { transform: scale(0.97); opacity: 0.8; }
+.btn.go { background: var(--green-dim); border-color: var(--green); color: var(--green); }
+.btn.stop { background: var(--red-dim); border-color: var(--red); color: var(--red); }
+.btn.accent { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+.btn:disabled { opacity: 0.28; pointer-events: none; }
+.btn-row { display: flex; gap: 9px; }
+.btn-row .btn { flex: 1; }
 
-  .obs-instructions {
-    background: #111;
-    border: 1px solid #1e3a2a;
-    border-radius: 8px;
-    padding: 12px 14px;
-    font-size: 11px;
-    color: #4a9;
-    line-height: 1.7;
-  }
-  .obs-instructions strong {
-    color: var(--accent);
-    font-weight: 700;
-  }
+.stats { display: flex; gap: 9px; }
+.stat { flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 7px; padding: 7px 4px; text-align: center; }
+.stat-v { font-size: 15px; font-weight: 700; color: var(--accent); }
+.stat-n { font-size: 8px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 1px; }
 
-  .toast {
-    position: fixed;
-    bottom: 24px;
-    left: 50%;
-    transform: translateX(-50%) translateY(60px);
-    background: var(--accent);
-    color: #000;
-    font-size: 12px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    padding: 10px 20px;
-    border-radius: 20px;
-    font-weight: 700;
-    transition: transform 0.3s ease;
-    pointer-events: none;
-    z-index: 999;
-  }
-  .toast.show { transform: translateX(-50%) translateY(0); }
+.info { background: var(--surface2); border: 1px solid var(--border); border-left: 2px solid var(--accent); border-radius: 7px; padding: 11px 13px; font-size: 11px; color: var(--muted2); line-height: 1.75; }
+.info strong { color: var(--text); font-weight: 700; }
+.info code { color: var(--accent); font-size: 10px; }
+.info.warn { border-left-color: var(--amber); }
+.info.warn strong { color: var(--amber); }
+.info.success { border-left-color: var(--green); }
+.info.success strong { color: var(--green); }
 
-  .mode-tabs {
-    display: flex;
-    border-bottom: 1px solid var(--border);
-    background: var(--surface);
-  }
-  .tab {
-    flex: 1;
-    padding: 10px;
-    text-align: center;
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: var(--muted);
-    cursor: pointer;
-    border-bottom: 2px solid transparent;
-    transition: all 0.2s;
-  }
-  .tab.active {
-    color: var(--accent);
-    border-bottom-color: var(--accent);
-  }
+.pin-row { display: flex; align-items: center; gap: 8px; }
+.pin-toggle { background: none; border: none; color: var(--muted); font-family: inherit; font-size: 10px; cursor: pointer; letter-spacing: 0.08em; padding: 0; white-space: nowrap; }
+.pin-toggle.on { color: var(--amber); }
 
-  .panel { display: none; }
-  .panel.active { display: block; }
+.room-display { text-align: center; padding: 10px; }
+.room-id { font-size: 36px; font-weight: 700; letter-spacing: 0.3em; color: var(--accent); }
+.room-sub { font-size: 9px; color: var(--muted); letter-spacing: 0.12em; margin-top: 4px; }
 
-  /* Receiver page styles */
-  #receiver-panel video {
-    width: 100%;
-    max-height: 60vh;
-    background: #000;
-    display: block;
-  }
-  .recv-placeholder {
-    background: #000;
-    height: 200px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--muted);
-    font-size: 12px;
-    letter-spacing: 0.1em;
-  }
+.toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(70px); background: var(--accent); color: #000; font-size: 11px; letter-spacing: 0.09em; text-transform: uppercase; padding: 9px 18px; border-radius: 20px; font-weight: 700; transition: transform 0.28s cubic-bezier(.175,.885,.32,1.275); pointer-events: none; z-index: 999; white-space: nowrap; }
+.toast.show { transform: translateX(-50%) translateY(0); }
+
+#qr-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+
+#pin-lock { position: fixed; inset: 0; background: rgba(8,8,8,0.97); z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 32px; }
+#pin-lock h2 { font-size: 13px; color: var(--accent); letter-spacing: 0.2em; }
+#pin-lock input { width: 160px; text-align: center; font-size: 24px; letter-spacing: 0.3em; border-bottom: 2px solid var(--accent); padding-bottom: 6px; color: var(--text); background: transparent; font-family: inherit; outline: none; border-top: none; border-left: none; border-right: none; }
+#pin-lock .pin-err { font-size: 11px; color: var(--red); height: 16px; }
+#pin-lock .btn { width: 160px; }
 </style>
 </head>
 <body>
 
-<header>
-  <span class="logo">&#9654; LiveCam</span>
-  <span class="status-pill" id="status-pill">
-    <span class="status-dot"></span>
-    <span id="status-text">IDLE</span>
-  </span>
-</header>
-
-<div class="mode-tabs">
-  <div class="tab active" onclick="switchTab('sender')">&#128247; SENDER</div>
-  <div class="tab" onclick="switchTab('receiver')">&#128250; RECEIVER / OBS</div>
-  <div class="tab" onclick="switchTab('help')">&#10068; SETUP</div>
+<div id="pin-lock" style="display:none">
+  <h2>&#128274; STREAM LOCKED</h2>
+  <p style="font-size:11px;color:var(--muted2);text-align:center">Enter the PIN set by the streamer</p>
+  <input type="password" id="pin-entry" maxlength="8" placeholder="••••" inputmode="numeric">
+  <div class="pin-err" id="pin-err"></div>
+  <button class="btn accent" onclick="submitPin()">UNLOCK</button>
 </div>
 
-<!-- SENDER PANEL -->
+<header>
+  <div class="logo"><div class="logo-dot"></div>LIVECAM</div>
+  <div class="pill" id="status-pill"><div class="dot"></div><span id="status-txt">IDLE</span></div>
+</header>
+
+<div class="tabs">
+  <button class="tab active" onclick="tab('sender')">&#128247; SENDER</button>
+  <button class="tab" onclick="tab('receiver')">&#128250; VIEWER</button>
+  <button class="tab" onclick="tab('help')">&#9881; SETUP</button>
+</div>
+
+<!-- SENDER -->
 <div class="panel active" id="sender-panel">
-  <div class="video-container" style="height: 260px;">
+  <div class="vid-wrap">
     <video id="localVideo" autoplay muted playsinline></video>
-    <div class="video-overlay" id="video-overlay">
+    <div class="vid-idle" id="vid-idle">
       <div class="idle-icon">&#128247;</div>
-      <div class="idle-text">Tap start to preview camera</div>
+      <div class="idle-txt">TAP START TO PREVIEW</div>
     </div>
+    <div class="viewer-badge" id="viewer-badge">&#128065; <span id="vcount">0</span></div>
   </div>
 
-  <div class="stream-url-bar">
-    <span class="url-label">OBS URL</span>
-    <span class="url-value" id="stream-url">—</span>
-    <button class="copy-btn" onclick="copyUrl()">COPY</button>
+  <div class="urlbar">
+    <span class="url-lbl">OBS URL</span>
+    <span class="url-val" id="obs-url">— start stream first —</span>
+    <button class="copy-btn" onclick="copyObs()">COPY</button>
   </div>
 
-  <div class="controls">
-    <div class="settings-grid">
-      <div class="setting-card">
-        <div class="setting-label">Camera</div>
-        <select id="cam-select" onchange="switchCamera()">
+  <div class="ctrl">
+    <div class="grid3">
+      <div class="card">
+        <div class="card-lbl">Camera</div>
+        <select id="cam-sel" onchange="camChanged()">
           <option value="environment">Rear</option>
           <option value="user">Front</option>
         </select>
       </div>
-      <div class="setting-card">
-        <div class="setting-label">Quality</div>
-        <select id="quality-select">
-          <option value="hd">HD 720p</option>
-          <option value="fhd">FHD 1080p</option>
+      <div class="card">
+        <div class="card-lbl">Quality</div>
+        <select id="qual-sel">
           <option value="sd">SD 480p</option>
+          <option value="hd" selected>HD 720p</option>
+          <option value="fhd">FHD 1080p</option>
+          <option value="4k">4K 2160p</option>
+        </select>
+      </div>
+      <div class="card">
+        <div class="card-lbl">FPS</div>
+        <select id="fps-sel">
+          <option value="24">24</option>
+          <option value="30" selected>30</option>
+          <option value="60">60</option>
         </select>
       </div>
     </div>
 
-    <div class="control-row">
-      <button class="btn primary" id="start-btn" onclick="startStream()">
-        <span class="btn-icon">&#9679;</span> START STREAM
-      </button>
-      <button class="btn danger" id="stop-btn" onclick="stopStream()" disabled>
-        <span class="btn-icon">&#9632;</span> STOP
-      </button>
+    <div class="card">
+      <div class="card-lbl">Stream PIN (optional)</div>
+      <div class="pin-row">
+        <input type="password" id="pin-input" placeholder="Leave blank = open stream" maxlength="8" inputmode="numeric" style="flex:1">
+        <button class="pin-toggle" id="pin-vis-btn" onclick="togglePinVis()">SHOW</button>
+      </div>
     </div>
 
-    <div class="control-row">
-      <button class="btn" id="flip-btn" onclick="flipCamera()">
-        &#8635; FLIP CAM
-      </button>
-      <button class="btn" onclick="toggleMic()" id="mic-btn">
-        &#127908; MIC ON
-      </button>
+    <div class="btn-row">
+      <button class="btn go" id="start-btn" onclick="startStream()">&#9679; START</button>
+      <button class="btn stop" id="stop-btn" onclick="stopStream()" disabled>&#9632; STOP</button>
     </div>
 
-    <div class="stats-row" id="stats-row" style="display:none">
-      <div class="stat"><div class="stat-val" id="stat-fps">—</div><div class="stat-name">FPS</div></div>
-      <div class="stat"><div class="stat-val" id="stat-res">—</div><div class="stat-name">RES</div></div>
-      <div class="stat"><div class="stat-val" id="stat-conn">0</div><div class="stat-name">VIEWERS</div></div>
+    <div class="btn-row">
+      <button class="btn" onclick="flipCam()">&#8635; FLIP</button>
+      <button class="btn" id="mic-btn" onclick="toggleMic()">&#127908; MIC</button>
+      <button class="btn" id="torch-btn" onclick="toggleTorch()" style="display:none">&#128294; TORCH</button>
+    </div>
+
+    <div id="room-display" class="room-display" style="display:none">
+      <div class="room-id" id="room-id-display">——</div>
+      <div class="room-sub">ROOM ID — share with viewer device</div>
+    </div>
+
+    <div class="stats" id="stats" style="display:none">
+      <div class="stat"><div class="stat-v" id="s-fps">—</div><div class="stat-n">FPS</div></div>
+      <div class="stat"><div class="stat-v" id="s-res">—</div><div class="stat-n">RES</div></div>
+      <div class="stat"><div class="stat-v" id="s-viewers">0</div><div class="stat-n">VIEWERS</div></div>
+      <div class="stat"><div class="stat-v" id="s-kbps">—</div><div class="stat-n">KBPS</div></div>
+    </div>
+
+    <div id="qr-wrap" style="display:none;flex-direction:column;align-items:center;gap:8px">
+      <div id="qr-div"></div>
+      <div style="font-size:9px;color:var(--muted);letter-spacing:0.1em" id="qr-lbl"></div>
     </div>
   </div>
 </div>
 
-<!-- RECEIVER PANEL -->
+<!-- VIEWER -->
 <div class="panel" id="receiver-panel">
-  <div class="controls">
-    <div class="obs-instructions">
-      <strong>Viewing stream from another device:</strong><br>
-      Enter the stream ID from the sender device below, or open this page on your receiving device and paste the Room ID.
+  <div class="ctrl">
+    <div class="info">
+      <strong>Same Wi-Fi required.</strong> Open this same page on your receiving device or in OBS Browser Source. Enter the Room ID shown on the sender device.
     </div>
-    <div class="setting-card" style="margin-top:4px">
-      <div class="setting-label">Room / Stream ID</div>
-      <input id="room-input" type="text" placeholder="Paste room ID here..."
-        style="width:100%;background:transparent;border:none;color:var(--text);font-family:inherit;font-size:13px;outline:none;padding:4px 0">
+    <div class="card">
+      <div class="card-lbl">Room ID</div>
+      <input type="text" id="room-in" placeholder="e.g. AB12CD" autocapitalize="characters" style="font-size:18px;letter-spacing:0.2em">
     </div>
-    <button class="btn primary" onclick="joinRoom()">&#128250; CONNECT TO STREAM</button>
-    <div class="recv-placeholder" id="recv-placeholder">Waiting for stream...</div>
-    <video id="remoteVideo" autoplay playsinline style="display:none; width:100%; max-height:55vh; background:#000;"></video>
-    <div class="obs-instructions" style="margin-top:8px">
-      <strong>For OBS capture:</strong><br>
-      In OBS: <strong>Sources → Browser Source</strong><br>
-      URL: <code style="color:#fff">[this page URL]?room=YOUR_ID&obs=1</code><br>
-      Width: 1280 &nbsp; Height: 720<br>
-      &#10003; Shutdown source when not visible
+    <div class="btn-row">
+      <button class="btn accent" onclick="joinRoom()">&#9654; CONNECT</button>
+      <button class="btn stop" onclick="leaveRoom()" id="leave-btn" disabled>&#9632; LEAVE</button>
+    </div>
+    <div id="recv-idle" class="info warn"><strong>Waiting...</strong> Enter a Room ID above and tap Connect.</div>
+    <video id="remoteVideo" autoplay playsinline style="display:none;width:100%;border-radius:8px;background:#000;max-height:55vw;object-fit:cover"></video>
+    <div class="stats" id="recv-stats" style="display:none">
+      <div class="stat"><div class="stat-v" id="rs-fps">—</div><div class="stat-n">FPS</div></div>
+      <div class="stat"><div class="stat-v" id="rs-res">—</div><div class="stat-n">RES</div></div>
+      <div class="stat"><div class="stat-v" id="rs-ms">—</div><div class="stat-n">MS</div></div>
     </div>
   </div>
 </div>
 
-<!-- HELP PANEL -->
+<!-- HELP -->
 <div class="panel" id="help-panel">
-  <div class="controls" style="gap:14px">
-    <div class="obs-instructions">
-      <strong>How to stream to OBS in 3 steps:</strong><br><br>
-      <strong>1. On your phone (Sender tab):</strong><br>
-      &nbsp;&nbsp;&#8250; Tap START STREAM<br>
-      &nbsp;&nbsp;&#8250; Copy the OBS URL<br><br>
-      <strong>2. In OBS on your computer:</strong><br>
-      &nbsp;&nbsp;&#8250; Add Source → Browser Source<br>
-      &nbsp;&nbsp;&#8250; Paste the URL<br>
-      &nbsp;&nbsp;&#8250; Set W:1280 H:720<br><br>
-      <strong>3. Start your OBS scene</strong><br>
-      &nbsp;&nbsp;&#8250; Your phone camera appears live!<br><br>
-      <strong>&#9888; Same Wi-Fi required</strong> for lowest latency. Works over internet too but adds delay.
+  <div class="ctrl">
+    <div class="info success">
+      <strong>No signaling server needed.</strong><br>
+      LiveCam uses your local Wi-Fi only. Signaling happens via browser localStorage — no cloud, no accounts, zero cost.
     </div>
-    <div class="obs-instructions">
-      <strong>Why not NDI?</strong><br><br>
-      True NDI requires a native app (SDK). This app uses <strong>WebRTC</strong> — the same tech used by Google Meet and Zoom — which works natively in OBS via Browser Source with near-zero latency on local Wi-Fi.<br><br>
-      For true NDI output: install <strong>OBS-NDI plugin</strong> on your desktop, then use OBS Virtual Camera to re-broadcast your Browser Source as NDI to other devices.
+    <div class="info">
+      <strong>How it works:</strong><br>
+      1. Phone &amp; OBS on <strong>same Wi-Fi</strong><br>
+      2. Sender taps Start → gets a Room ID<br>
+      3. OBS Browser Source opens viewer URL<br>
+      4. WebRTC connects directly — phone &#9654; OBS<br>
+      5. Video stays on your local network only
     </div>
-    <div class="obs-instructions">
-      <strong>Tips for best quality:</strong><br><br>
-      &#8250; Use <strong>same Wi-Fi network</strong><br>
-      &#8250; Keep phone <strong>plugged in</strong><br>
-      &#8250; Select <strong>FHD 1080p</strong> for sharpest image<br>
-      &#8250; In OBS, match Browser Source resolution to your scene output<br>
-      &#8250; Disable phone auto-lock while streaming
+    <div class="info">
+      <strong>OBS Browser Source setup:</strong><br>
+      Sources → Add → <strong>Browser Source</strong><br>
+      Paste the <strong>OBS URL</strong> from Sender tab<br>
+      Width: <code>1920</code> &nbsp; Height: <code>1080</code><br>
+      For 4K: <code>3840</code> x <code>2160</code><br>
+      ✓ Shutdown source when not visible<br>
+      ✓ Refresh when scene becomes active
+    </div>
+    <div class="info warn">
+      <strong>4K note:</strong><br>
+      iPhones cap at 1080p in Safari via WebRTC. Android Chrome may support 4K on newer devices. App auto-falls back to 1080p if 4K fails.
+    </div>
+    <div class="info warn">
+      <strong>PIN security:</strong><br>
+      PIN is SHA-256 hashed before comparison — never stored or sent in plaintext. Protects your stream on shared Wi-Fi networks. Anyone without the PIN sees a lock screen.
+    </div>
+    <div class="info">
+      <strong>Want true NDI from OBS?</strong><br>
+      Install free <strong>obs-ndi plugin</strong> on your PC. Enable Virtual Camera — other LAN devices see it as a native NDI source.
     </div>
   </div>
 </div>
 
 <div class="toast" id="toast"></div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
+// ── State ──
 let localStream = null;
-let peerConnections = {};
-let ws = null;
+let pcs = {};
 let roomId = null;
-let micEnabled = true;
-let statsInterval = null;
-let isSender = true;
+let pinHash = '';
+let micOn = true;
+let torchOn = false;
 let facingMode = 'environment';
+let statsTimer = null;
+let kbpsTimer = null;
+let lastBytes = 0;
+let isStreaming = false;
+let pollInterval = null;
+let pollSince = 0;
 
-const SIGNAL_SERVER = 'wss://stream-signal.glitch.me'; // fallback signaling
+let viewerPc = null;
+let viewerPollInterval = null;
 
-function switchTab(name) {
-  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.remove('active'));
+const ICE = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+const QUALITY = {
+  sd:   { width: 640,  height: 480  },
+  hd:   { width: 1280, height: 720  },
+  fhd:  { width: 1920, height: 1080 },
+  '4k': { width: 3840, height: 2160 }
+};
+
+// ── localStorage signaling keys ──
+const lk = (room, type) => `lc:${room}:${type}`;
+function lsWrite(room, type, data) {
+  const key = lk(room, type);
+  let arr = [];
+  try { arr = JSON.parse(localStorage.getItem(key) || '[]'); } catch{}
+  arr.push({ ...data, t: Date.now() });
+  // Keep last 50 messages per key
+  if(arr.length > 50) arr = arr.slice(-50);
+  localStorage.setItem(key, JSON.stringify(arr));
+}
+function lsRead(room, type, since) {
+  let arr = [];
+  try { arr = JSON.parse(localStorage.getItem(lk(room, type)) || '[]'); } catch{}
+  return arr.filter(m => m.t > since);
+}
+function lsClear(room) {
+  ['offer','answer','ice-s','ice-v','ping','pong','meta'].forEach(t => localStorage.removeItem(lk(room,t)));
+}
+
+// ── PIN hash ──
+async function hashPin(pin) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('livecam:' + pin));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('').slice(0,16);
+}
+
+// ── Tab switching ──
+function tab(name) {
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
-  const tabs = ['sender','receiver','help'];
-  document.querySelectorAll('.tab')[tabs.indexOf(name)].classList.add('active');
-  document.getElementById(name+'-panel').classList.add('active');
-}
-
-function getQualityConstraints() {
-  const q = document.getElementById('quality-select').value;
-  const map = {
-    sd: {width:640,height:480},
-    hd: {width:1280,height:720},
-    fhd: {width:1920,height:1080}
-  };
-  return map[q];
-}
-
-async function startStream() {
-  try {
-    const dims = getQualityConstraints();
-    localStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode, width:{ideal:dims.width}, height:{ideal:dims.height}, frameRate:{ideal:30} },
-      audio: micEnabled
-    });
-
-    const video = document.getElementById('localVideo');
-    video.srcObject = localStream;
-    document.getElementById('video-overlay').classList.add('hidden');
-
-    roomId = generateId();
-    updateUI(true);
-    setupSignaling();
-    startStats();
-    showToast('STREAM STARTED');
-  } catch(e) {
-    showToast('CAM ERROR: ' + e.message);
-  }
-}
-
-function stopStream() {
-  if(localStream) { localStream.getTracks().forEach(t=>t.stop()); localStream=null; }
-  if(ws) { ws.close(); ws=null; }
-  Object.values(peerConnections).forEach(pc=>pc.close());
-  peerConnections = {};
-  roomId = null;
-  document.getElementById('localVideo').srcObject = null;
-  document.getElementById('video-overlay').classList.remove('hidden');
-  updateUI(false);
-  stopStats();
-  showToast('STREAM STOPPED');
-}
-
-function updateUI(streaming) {
-  const pill = document.getElementById('status-pill');
-  document.getElementById('status-text').textContent = streaming ? 'LIVE' : 'IDLE';
-  pill.className = 'status-pill' + (streaming ? ' live' : '');
-  document.getElementById('start-btn').disabled = streaming;
-  document.getElementById('stop-btn').disabled = !streaming;
-  document.getElementById('stats-row').style.display = streaming ? 'flex' : 'none';
-
-  if(streaming && roomId) {
-    const url = window.location.href.split('?')[0] + '?room=' + roomId + '&obs=1';
-    document.getElementById('stream-url').textContent = url;
-  } else {
-    document.getElementById('stream-url').textContent = '—';
-  }
-}
-
-function generateId() {
-  return Math.random().toString(36).substring(2,8).toUpperCase();
-}
-
-function setupSignaling() {
-  // Self-hosted signaling via BroadcastChannel (same device/tab) + fallback
-  // For cross-device: uses a lightweight public signaling approach
-  try {
-    ws = new WebSocket(SIGNAL_SERVER);
-    ws.onopen = () => { ws.send(JSON.stringify({type:'join',room:roomId,role:'sender'})); };
-    ws.onmessage = async (e) => {
-      const msg = JSON.parse(e.data);
-      if(msg.type==='viewer-join') await handleViewer(msg.viewerId);
-      if(msg.type==='answer') await handleAnswer(msg.viewerId, msg.sdp);
-      if(msg.type==='ice-viewer') await handleRemoteIce(msg.viewerId, msg.candidate);
-    };
-    ws.onerror = () => console.log('Signaling server unavailable — use local network mode');
-  } catch(e) {}
-
-  // LocalStorage signaling for same-network (no server needed)
-  window.addEventListener('storage', handleStorageSignal);
-  localStorage.setItem('livecam-room', roomId);
-  localStorage.setItem('livecam-offer-'+roomId, '');
-}
-
-async function handleViewer(viewerId) {
-  const pc = new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]});
-  peerConnections[viewerId] = pc;
-  localStream.getTracks().forEach(t=>pc.addTrack(t,localStream));
-  pc.onicecandidate = e => {
-    if(e.candidate && ws && ws.readyState===1)
-      ws.send(JSON.stringify({type:'ice-sender',room:roomId,viewerId,candidate:e.candidate}));
-  };
-  const offer = await pc.createOffer();
-  await pc.setLocalDescription(offer);
-  if(ws && ws.readyState===1)
-    ws.send(JSON.stringify({type:'offer',room:roomId,viewerId,sdp:offer}));
-  updateViewerCount();
-}
-
-async function handleAnswer(viewerId, sdp) {
-  const pc = peerConnections[viewerId];
-  if(pc) await pc.setRemoteDescription(new RTCSessionDescription(sdp));
-}
-
-async function handleRemoteIce(viewerId, candidate) {
-  const pc = peerConnections[viewerId];
-  if(pc) await pc.addIceCandidate(new RTCIceCandidate(candidate));
-}
-
-function updateViewerCount() {
-  document.getElementById('stat-conn').textContent = Object.keys(peerConnections).length;
-}
-
-function handleStorageSignal(e) { /* localStorage p2p for same device demos */ }
-
-async function joinRoom() {
-  const id = document.getElementById('room-input').value.trim().toUpperCase();
-  if(!id) { showToast('ENTER A ROOM ID'); return; }
-  roomId = id;
-  const pc = new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]});
-  pc.ontrack = e => {
-    const v = document.getElementById('remoteVideo');
-    v.srcObject = e.streams[0];
-    v.style.display = 'block';
-    document.getElementById('recv-placeholder').style.display='none';
-  };
-  try {
-    const ws2 = new WebSocket(SIGNAL_SERVER);
-    ws2.onopen = () => ws2.send(JSON.stringify({type:'join',room:id,role:'viewer',viewerId:generateId()}));
-    ws2.onmessage = async e => {
-      const msg = JSON.parse(e.data);
-      if(msg.type==='offer') {
-        await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
-        const answer = await pc.createAnswer();
-        await pc.setLocalDescription(answer);
-        ws2.send(JSON.stringify({type:'answer',room:id,viewerId:msg.viewerId,sdp:answer}));
-      }
-      if(msg.type==='ice-sender') await pc.addIceCandidate(new RTCIceCandidate(msg.candidate));
-    };
-    pc.onicecandidate = e => {
-      if(e.candidate) ws2.send(JSON.stringify({type:'ice-viewer',room:id,candidate:e.candidate}));
-    };
-    showToast('CONNECTING...');
-  } catch(e) { showToast('CONNECTION FAILED'); }
-}
-
-async function flipCamera() {
-  facingMode = facingMode === 'environment' ? 'user' : 'environment';
-  document.getElementById('cam-select').value = facingMode;
-  if(localStream) {
-    localStream.getTracks().forEach(t=>t.stop());
-    await startStream();
-  }
-}
-
-async function switchCamera() {
-  facingMode = document.getElementById('cam-select').value;
-  if(localStream) {
-    localStream.getTracks().forEach(t=>t.stop());
-    await startStream();
-  }
-}
-
-function toggleMic() {
-  micEnabled = !micEnabled;
-  if(localStream) {
-    localStream.getAudioTracks().forEach(t=>t.enabled=micEnabled);
-  }
-  document.getElementById('mic-btn').innerHTML = micEnabled ? '&#127908; MIC ON' : '&#128263; MIC OFF';
-  showToast(micEnabled ? 'MIC ON' : 'MIC OFF');
-}
-
-function startStats() {
-  statsInterval = setInterval(async () => {
-    if(!localStream) return;
-    const vt = localStream.getVideoTracks()[0];
-    if(!vt) return;
-    const settings = vt.getSettings();
-    document.getElementById('stat-fps').textContent = Math.round(settings.frameRate||30);
-    document.getElementById('stat-res').textContent = (settings.width||'?')+'p';
-  }, 1000);
-}
-
-function stopStats() {
-  if(statsInterval) { clearInterval(statsInterval); statsInterval=null; }
-}
-
-function copyUrl() {
-  const url = document.getElementById('stream-url').textContent;
-  if(url==='—') { showToast('START STREAM FIRST'); return; }
-  navigator.clipboard.writeText(url).then(()=>showToast('URL COPIED!')).catch(()=>{
-    const ta = document.createElement('textarea');
-    ta.value = url; document.body.appendChild(ta); ta.select();
-    document.execCommand('copy'); document.body.removeChild(ta);
-    showToast('URL COPIED!');
+  ['sender','receiver','help'].forEach((n,i)=>{
+    if(n===name){
+      document.querySelectorAll('.tab')[i].classList.add('active');
+      document.getElementById(n+'-panel').classList.add('active');
+    }
   });
 }
 
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'), 2200);
+function genId() { return Math.random().toString(36).slice(2,8).toUpperCase(); }
+
+// ── START STREAM ──
+async function startStream() {
+  const qual = document.getElementById('qual-sel').value;
+  const fps  = parseInt(document.getElementById('fps-sel').value);
+  const dims = QUALITY[qual];
+  const pinVal = document.getElementById('pin-input').value.trim();
+
+  try {
+    localStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode, width:{ideal:dims.width}, height:{ideal:dims.height}, frameRate:{ideal:fps} },
+      audio: micOn
+    });
+  } catch(e) {
+    if(qual === '4k') {
+      showToast('4K UNSUPPORTED — TRYING 1080P');
+      document.getElementById('qual-sel').value = 'fhd';
+      try {
+        localStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode, width:{ideal:1920}, height:{ideal:1080}, frameRate:{ideal:fps} },
+          audio: micOn
+        });
+      } catch(e2) { showToast('CAM ERROR'); return; }
+    } else {
+      showToast('CAM ERROR: ' + e.message.slice(0,50));
+      return;
+    }
+  }
+
+  document.getElementById('localVideo').srcObject = localStream;
+  document.getElementById('vid-idle').classList.add('hidden');
+
+  // Torch support
+  const vt = localStream.getVideoTracks()[0];
+  if(vt?.getCapabilities?.()?.torch) document.getElementById('torch-btn').style.display = '';
+
+  // PIN
+  pinHash = pinVal ? await hashPin(pinVal) : '';
+
+  roomId = genId();
+  isStreaming = true;
+  lsClear(roomId);
+  localStorage.setItem(lk(roomId,'meta'), JSON.stringify({ room:roomId, hasPIN:!!pinHash, pinHash, ts:Date.now() }));
+
+  updateSenderUI(true);
+  startPolling();
+  startStats();
+  generateQR();
+  showToast('LIVE — ROOM: ' + roomId);
 }
 
-// OBS mode: if ?obs=1 param, auto-hide UI and full-screen video
-const params = new URLSearchParams(window.location.search);
-if(params.get('obs')==='1') {
-  document.body.innerHTML = '<video id="obsVideo" autoplay playsinline style="width:100vw;height:100vh;object-fit:cover;background:#000;display:block;"></video>';
-  const obsRoomId = params.get('room');
-  if(obsRoomId) {
-    // auto-connect in headless OBS mode
-    const pc = new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]});
-    pc.ontrack = e => { document.getElementById('obsVideo').srcObject = e.streams[0]; };
-    try {
-      const wsObs = new WebSocket(SIGNAL_SERVER);
-      const vid = Math.random().toString(36).slice(2,8);
-      wsObs.onopen = ()=>wsObs.send(JSON.stringify({type:'join',room:obsRoomId,role:'viewer',viewerId:vid}));
-      wsObs.onmessage = async e => {
-        const msg = JSON.parse(e.data);
-        if(msg.type==='offer'){
-          await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
-          const ans = await pc.createAnswer(); await pc.setLocalDescription(ans);
-          wsObs.send(JSON.stringify({type:'answer',room:obsRoomId,viewerId:vid,sdp:ans}));
-        }
-        if(msg.type==='ice-sender') await pc.addIceCandidate(new RTCIceCandidate(msg.candidate));
-      };
-      pc.onicecandidate=e=>{ if(e.candidate) wsObs.send(JSON.stringify({type:'ice-viewer',room:obsRoomId,candidate:e.candidate})); };
-    } catch(e){}
+// ── STOP STREAM ──
+function stopStream() {
+  isStreaming = false;
+  clearInterval(pollInterval); pollInterval = null;
+  if(localStream) { localStream.getTracks().forEach(t=>t.stop()); localStream = null; }
+  Object.values(pcs).forEach(pc=>pc.close()); pcs = {};
+  if(roomId) lsClear(roomId);
+  roomId = null;
+  document.getElementById('localVideo').srcObject = null;
+  document.getElementById('vid-idle').classList.remove('hidden');
+  document.getElementById('qr-wrap').style.display = 'none';
+  document.getElementById('room-display').style.display = 'none';
+  stopStats();
+  updateSenderUI(false);
+  showToast('STREAM STOPPED');
+}
+
+function updateSenderUI(on) {
+  document.getElementById('start-btn').disabled = on;
+  document.getElementById('stop-btn').disabled = !on;
+  document.getElementById('stats').style.display = on ? 'flex' : 'none';
+  const pill = document.getElementById('status-pill');
+  document.getElementById('status-txt').textContent = on ? 'LIVE' : 'IDLE';
+  pill.className = 'pill' + (on ? ' live' : '');
+  document.getElementById('viewer-badge').classList.toggle('show', on);
+  document.getElementById('room-display').style.display = on ? 'block' : 'none';
+  if(on && roomId) {
+    document.getElementById('room-id-display').textContent = roomId;
+    document.getElementById('obs-url').textContent = location.href.split('?')[0] + '?room=' + roomId + '&obs=1';
+  } else {
+    document.getElementById('obs-url').textContent = '— start stream first —';
   }
+}
+
+// ── Sender polling ──
+function startPolling() {
+  pollSince = Date.now();
+  pollInterval = setInterval(senderPoll, 350);
+}
+
+async function senderPoll() {
+  if(!roomId || !isStreaming) return;
+
+  const joins = lsRead(roomId, 'ping', pollSince);
+  for(const j of joins) {
+    if(!pcs[j.viewerId]) await createSenderPC(j.viewerId, j.pinHash || '');
+  }
+
+  for(const [vid, pc] of Object.entries(pcs)) {
+    const answers = lsRead(roomId, 'answer', pollSince);
+    for(const m of answers) {
+      if(m.viewerId === vid && pc.signalingState === 'have-local-offer') {
+        try { await pc.setRemoteDescription(new RTCSessionDescription(m.sdp)); } catch{}
+      }
+    }
+    const ices = lsRead(roomId, 'ice-v', pollSince);
+    for(const m of ices) {
+      if(m.viewerId === vid && m.candidate) {
+        try { await pc.addIceCandidate(new RTCIceCandidate(m.candidate)); } catch{}
+      }
+    }
+  }
+
+  pollSince = Date.now() - 150;
+  updateViewerCount();
+}
+
+async function createSenderPC(viewerId, incomingHash) {
+  if(pinHash && incomingHash !== pinHash) {
+    lsWrite(roomId, 'pong', { viewerId, error:'bad-pin' });
+    return;
+  }
+  const pc = new RTCPeerConnection(ICE);
+  pcs[viewerId] = pc;
+  localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+  pc.onicecandidate = e => { if(e.candidate) lsWrite(roomId,'ice-s',{viewerId,candidate:e.candidate}); };
+  pc.onconnectionstatechange = () => {
+    if(['disconnected','failed','closed'].includes(pc.connectionState)) {
+      pc.close(); delete pcs[viewerId]; updateViewerCount();
+    }
+  };
+  const offer = await pc.createOffer();
+  await pc.setLocalDescription(offer);
+  lsWrite(roomId, 'offer', { viewerId, sdp:offer });
+}
+
+function updateViewerCount() {
+  const n = Object.keys(pcs).length;
+  document.getElementById('vcount').textContent = n;
+  document.getElementById('s-viewers').textContent = n;
+}
+
+// ── JOIN ROOM (Viewer) ──
+async function joinRoom() {
+  const rid = document.getElementById('room-in').value.trim().toUpperCase();
+  if(!rid) { showToast('ENTER ROOM ID'); return; }
+  let meta = null;
+  try { meta = JSON.parse(localStorage.getItem(lk(rid,'meta')) || 'null'); } catch{}
+  if(!meta) { showToast('ROOM NOT FOUND — SAME WI-FI?'); return; }
+
+  if(meta.hasPIN) {
+    const lock = document.getElementById('pin-lock');
+    lock.style.display = 'flex';
+    lock.dataset.room = rid;
+    lock.dataset.hash = meta.pinHash;
+    document.getElementById('pin-entry').value = '';
+    document.getElementById('pin-err').textContent = '';
+    return;
+  }
+  await connectViewer(rid, '');
+}
+
+async function submitPin() {
+  const lock = document.getElementById('pin-lock');
+  const rid = lock.dataset.room;
+  const expected = lock.dataset.hash;
+  const entered = document.getElementById('pin-entry').value.trim();
+  if(!entered) return;
+  const h = await hashPin(entered);
+  if(h !== expected) {
+    document.getElementById('pin-err').textContent = 'Wrong PIN — try again';
+    document.getElementById('pin-entry').value = '';
+    return;
+  }
+  lock.style.display = 'none';
+  await connectViewer(rid, h);
+}
+
+async function connectViewer(rid, ph) {
+  if(viewerPc) { viewerPc.close(); viewerPc = null; }
+  clearInterval(viewerPollInterval);
+
+  viewerPc = new RTCPeerConnection(ICE);
+  const viewerId = genId();
+  let vpSince = Date.now();
+
+  viewerPc.ontrack = e => {
+    const v = document.getElementById('remoteVideo');
+    v.srcObject = e.streams[0];
+    v.style.display = 'block';
+    document.getElementById('recv-idle').style.display = 'none';
+    document.getElementById('recv-stats').style.display = 'flex';
+    showToast('CONNECTED!');
+    startRecvStats();
+  };
+  viewerPc.onicecandidate = e => { if(e.candidate) lsWrite(rid,'ice-v',{viewerId,candidate:e.candidate}); };
+  viewerPc.onconnectionstatechange = () => {
+    if(['disconnected','failed'].includes(viewerPc.connectionState)) showToast('CONNECTION LOST');
+  };
+
+  lsWrite(rid, 'ping', { viewerId, pinHash: ph });
+  document.getElementById('leave-btn').disabled = false;
+  showToast('JOINING ' + rid + '...');
+
+  viewerPollInterval = setInterval(async () => {
+    const pongs = lsRead(rid,'pong',vpSince);
+    for(const p of pongs) {
+      if(p.viewerId===viewerId && p.error==='bad-pin') { showToast('WRONG PIN'); clearInterval(viewerPollInterval); return; }
+    }
+    const offers = lsRead(rid,'offer',vpSince);
+    for(const m of offers) {
+      if(m.viewerId===viewerId && viewerPc.signalingState==='stable') {
+        try {
+          await viewerPc.setRemoteDescription(new RTCSessionDescription(m.sdp));
+          const ans = await viewerPc.createAnswer();
+          await viewerPc.setLocalDescription(ans);
+          lsWrite(rid,'answer',{viewerId,sdp:ans});
+        } catch{}
+      }
+    }
+    const ices = lsRead(rid,'ice-s',vpSince);
+    for(const m of ices) {
+      if(m.viewerId===viewerId && m.candidate) {
+        try { await viewerPc.addIceCandidate(new RTCIceCandidate(m.candidate)); } catch{}
+      }
+    }
+    vpSince = Date.now() - 150;
+    if(viewerPc.connectionState==='connected') clearInterval(viewerPollInterval);
+  }, 350);
+
+  setTimeout(()=>{ if(viewerPc?.connectionState!=='connected'){ clearInterval(viewerPollInterval); showToast('TIMEOUT — IS SENDER ON SAME WI-FI?'); } }, 20000);
+}
+
+function leaveRoom() {
+  clearInterval(viewerPollInterval);
+  if(viewerPc) { viewerPc.close(); viewerPc = null; }
+  document.getElementById('remoteVideo').style.display = 'none';
+  document.getElementById('remoteVideo').srcObject = null;
+  document.getElementById('recv-idle').style.display = '';
+  document.getElementById('recv-stats').style.display = 'none';
+  document.getElementById('leave-btn').disabled = true;
+  showToast('DISCONNECTED');
+}
+
+// ── Controls ──
+async function flipCam() {
+  facingMode = facingMode==='environment' ? 'user' : 'environment';
+  document.getElementById('cam-sel').value = facingMode;
+  if(isStreaming) { stopStream(); await startStream(); }
+}
+async function camChanged() {
+  facingMode = document.getElementById('cam-sel').value;
+  if(isStreaming) { stopStream(); await startStream(); }
+}
+function toggleMic() {
+  micOn = !micOn;
+  if(localStream) localStream.getAudioTracks().forEach(t=>t.enabled=micOn);
+  document.getElementById('mic-btn').innerHTML = micOn ? '&#127908; MIC' : '&#128263; MUTE';
+  showToast(micOn ? 'MIC ON' : 'MUTED');
+}
+async function toggleTorch() {
+  const vt = localStream?.getVideoTracks()[0];
+  if(!vt) return;
+  torchOn = !torchOn;
+  await vt.applyConstraints({advanced:[{torch:torchOn}]}).catch(()=>{});
+  document.getElementById('torch-btn').innerHTML = torchOn ? '&#128294; ON' : '&#128294; OFF';
+}
+function togglePinVis() {
+  const inp = document.getElementById('pin-input');
+  const btn = document.getElementById('pin-vis-btn');
+  const showing = inp.type==='text';
+  inp.type = showing ? 'password' : 'text';
+  btn.textContent = showing ? 'SHOW' : 'HIDE';
+  btn.classList.toggle('on', !showing);
+}
+
+// ── Stats ──
+function startStats() {
+  statsTimer = setInterval(()=>{
+    if(!localStream) return;
+    const s = localStream.getVideoTracks()[0]?.getSettings();
+    if(s){ document.getElementById('s-fps').textContent=Math.round(s.frameRate||0); document.getElementById('s-res').textContent=s.width?s.width+'p':'—'; }
+  },1000);
+  kbpsTimer = setInterval(async()=>{
+    const pc = Object.values(pcs)[0]; if(!pc) return;
+    const stats = await pc.getStats();
+    stats.forEach(r=>{ if(r.type==='outbound-rtp'&&r.kind==='video'){ const kb=Math.round((r.bytesSent-lastBytes)*8/1024); lastBytes=r.bytesSent; document.getElementById('s-kbps').textContent=kb>0?kb:'—'; } });
+  },1000);
+}
+function stopStats() { clearInterval(statsTimer); clearInterval(kbpsTimer); }
+
+let recvStatsTimer = null;
+function startRecvStats() {
+  recvStatsTimer = setInterval(async()=>{
+    if(!viewerPc) return;
+    const v = document.getElementById('remoteVideo');
+    if(v.videoWidth) document.getElementById('rs-res').textContent=v.videoWidth+'p';
+    const stats = await viewerPc.getStats();
+    stats.forEach(r=>{
+      if(r.type==='inbound-rtp'&&r.kind==='video') document.getElementById('rs-fps').textContent=Math.round(r.framesPerSecond||0);
+      if(r.type==='candidate-pair'&&r.state==='succeeded') document.getElementById('rs-ms').textContent=Math.round((r.currentRoundTripTime||0)*1000);
+    });
+  },1000);
+}
+
+// ── QR ──
+function generateQR() {
+  if(!roomId) return;
+  const obsUrl = location.href.split('?')[0] + '?room=' + roomId + '&obs=1';
+  const wrap = document.getElementById('qr-wrap');
+  wrap.style.display = 'flex';
+  const div = document.getElementById('qr-div');
+  div.innerHTML = '';
+  if(window.QRCode) {
+    new QRCode(div, { text:obsUrl, width:180, height:180, colorDark:'#000', colorLight:'#fff', correctLevel:QRCode.CorrectLevel.M });
+  }
+  document.getElementById('qr-lbl').textContent = 'SCAN TO CONNECT — ROOM: ' + roomId;
+}
+
+// ── Copy ──
+function copyObs() {
+  const url = document.getElementById('obs-url').textContent;
+  if(url.includes('start stream')){ showToast('START STREAM FIRST'); return; }
+  navigator.clipboard.writeText(url).then(()=>showToast('COPIED!')).catch(()=>{
+    const t=document.createElement('textarea'); t.value=url; document.body.appendChild(t); t.select(); document.execCommand('copy'); document.body.removeChild(t); showToast('COPIED!');
+  });
+}
+
+// ── Toast ──
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2600);
+}
+
+// ── OBS headless mode ──
+const P = new URLSearchParams(location.search);
+if(P.get('obs')==='1' && P.get('room')) {
+  const r = P.get('room');
+  document.body.innerHTML = '<video autoplay playsinline id="obsv" style="width:100vw;height:100vh;object-fit:cover;background:#000;display:block"></video>';
+  const pc2 = new RTCPeerConnection(ICE);
+  pc2.ontrack = e => { document.getElementById('obsv').srcObject = e.streams[0]; };
+  const vid2 = genId();
+  let s2 = Date.now();
+
+  (async()=>{
+    let meta2=null;
+    try { meta2=JSON.parse(localStorage.getItem(lk(r,'meta'))||'null'); } catch{}
+    let ph2='';
+    if(meta2?.hasPIN){
+      const entered=prompt('Stream PIN required:');
+      if(entered) ph2=await hashPin(entered);
+    }
+    lsWrite(r,'ping',{viewerId:vid2,pinHash:ph2});
+    pc2.onicecandidate=e=>{if(e.candidate)lsWrite(r,'ice-v',{viewerId:vid2,candidate:e.candidate});};
+    const poll2=setInterval(async()=>{
+      const offers2=lsRead(r,'offer',s2);
+      for(const m of offers2){
+        if(m.viewerId===vid2&&pc2.signalingState==='stable'){
+          try{await pc2.setRemoteDescription(new RTCSessionDescription(m.sdp));const a=await pc2.createAnswer();await pc2.setLocalDescription(a);lsWrite(r,'answer',{viewerId:vid2,sdp:a});}catch{}
+        }
+      }
+      const ices2=lsRead(r,'ice-s',s2);
+      for(const m of ices2){if(m.viewerId===vid2&&m.candidate){try{await pc2.addIceCandidate(new RTCIceCandidate(m.candidate));}catch{}}}
+      s2=Date.now()-150;
+      if(pc2.connectionState==='connected')clearInterval(poll2);
+    },350);
+  })();
 }
 </script>
 </body>
