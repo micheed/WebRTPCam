@@ -5,117 +5,95 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>LiveCam</title>
 <style>
-:root {
-  --bg:#080808; --surface:#111; --s2:#1a1a1a;
-  --border:rgba(255,255,255,0.07); --border2:rgba(255,255,255,0.13);
-  --accent:#00e5ff; --adim:rgba(0,229,255,0.12);
-  --text:#eee; --muted:#555; --muted2:#888;
-  --red:#ff3b3b; --rdim:rgba(255,59,59,0.13);
-  --green:#00ff88; --gdim:rgba(0,255,136,0.12);
-  --amber:#ffb800;
+:root{
+  --bg:#080808;--sur:#111;--s2:#1a1a1a;
+  --b:rgba(255,255,255,0.07);--b2:rgba(255,255,255,0.13);
+  --ac:#00e5ff;--adim:rgba(0,229,255,0.12);
+  --tx:#eee;--mu:#555;--mu2:#888;
+  --red:#ff3b3b;--rdim:rgba(255,59,59,0.13);
+  --gr:#00ff88;--gdim:rgba(0,255,136,0.12);
+  --am:#ffb800;--amdim:rgba(255,184,0,0.12);
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%}
-body{font-family:'SF Mono','Fira Code','Courier New',monospace;background:var(--bg);color:var(--text);display:flex;flex-direction:column;min-height:100vh}
-
-header{padding:12px 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);background:var(--surface);position:sticky;top:0;z-index:10}
-.logo{font-size:12px;font-weight:700;letter-spacing:0.2em;color:var(--accent);display:flex;align-items:center;gap:8px}
-.ldot{width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent)}
-.pill{font-size:10px;padding:3px 10px;border-radius:20px;border:1px solid var(--border2);color:var(--muted2);letter-spacing:0.1em;display:flex;align-items:center;gap:5px}
+body{font-family:'SF Mono','Fira Code',monospace;background:var(--bg);color:var(--tx);display:flex;flex-direction:column;min-height:100vh}
+header{padding:12px 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--b);background:var(--sur);position:sticky;top:0;z-index:10}
+.logo{font-size:12px;font-weight:700;letter-spacing:0.2em;color:var(--ac);display:flex;align-items:center;gap:8px}
+.ldot{width:8px;height:8px;border-radius:50%;background:var(--ac);box-shadow:0 0 8px var(--ac)}
+.pill{font-size:10px;padding:3px 10px;border-radius:20px;border:1px solid var(--b2);color:var(--mu2);letter-spacing:0.1em;display:flex;align-items:center;gap:5px;transition:all 0.3s}
 .pill.live{border-color:var(--red);color:var(--red);background:var(--rdim)}
 .pill.live .dot{animation:blink 1s infinite}
 .dot{width:5px;height:5px;border-radius:50%;background:currentColor}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:0.15}}
-
-.tabs{display:flex;background:var(--surface);border-bottom:1px solid var(--border)}
-.tab{flex:1;padding:9px 4px;text-align:center;font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;font-family:inherit;background:none;border-top:none;border-left:none;border-right:none}
-.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
-
+.tabs{display:flex;background:var(--sur);border-bottom:1px solid var(--b)}
+.tab{flex:1;padding:9px 4px;text-align:center;font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--mu);cursor:pointer;border-bottom:2px solid transparent;font-family:inherit;background:none;border-top:none;border-left:none;border-right:none;transition:all 0.2s}
+.tab.active{color:var(--ac);border-bottom-color:var(--ac)}
 .panel{display:none;flex-direction:column;flex:1}
 .panel.active{display:flex}
-
 .vidwrap{position:relative;background:#000;height:52vw;min-height:200px;max-height:320px;overflow:hidden}
 video{width:100%;height:100%;object-fit:cover;display:block}
 .vidle{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:#000}
 .vidle.hidden{display:none}
 .vidle-icon{font-size:36px;opacity:0.3}
-.vidle-txt{font-size:10px;color:var(--muted);letter-spacing:0.12em}
-.vbadge{position:absolute;top:10px;right:10px;background:rgba(0,0,0,0.7);border:1px solid var(--border2);border-radius:12px;padding:3px 9px;font-size:10px;color:var(--accent);display:none}
+.vidle-txt{font-size:10px;color:var(--mu);letter-spacing:0.12em}
+.vbadge{position:absolute;top:10px;right:10px;background:rgba(0,0,0,0.75);border:1px solid var(--b2);border-radius:12px;padding:3px 9px;font-size:10px;color:var(--ac);display:none}
 .vbadge.show{display:block}
-
-.urlbar{background:var(--surface);border-bottom:1px solid var(--border);padding:8px 14px;display:flex;align-items:center;gap:8px}
-.ulbl{font-size:9px;color:var(--muted);letter-spacing:0.12em;white-space:nowrap}
-.uval{font-size:10px;color:var(--accent);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.cpybtn{background:var(--adim);border:1px solid var(--accent);color:var(--accent);font-family:inherit;font-size:9px;padding:3px 9px;border-radius:4px;cursor:pointer;letter-spacing:0.1em;white-space:nowrap}
-.cpybtn:active{opacity:0.7}
-
+.urlbar{background:var(--sur);border-bottom:1px solid var(--b);padding:8px 14px;display:flex;align-items:center;gap:8px}
+.ulbl{font-size:9px;color:var(--mu);letter-spacing:0.12em;white-space:nowrap}
+.uval{font-size:10px;color:var(--ac);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cpybtn{background:var(--adim);border:1px solid var(--ac);color:var(--ac);font-family:inherit;font-size:9px;padding:3px 9px;border-radius:4px;cursor:pointer;letter-spacing:0.1em;white-space:nowrap}
 .ctrl{padding:14px;display:flex;flex-direction:column;gap:11px;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
-.g2{display:grid;grid-template-columns:1fr 1fr;gap:9px}
 .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px}
-.card{background:var(--s2);border:1px solid var(--border);border-radius:7px;padding:9px 11px}
-.clbl{font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:0.13em;margin-bottom:5px}
-select,input[type=text],input[type=password]{width:100%;background:transparent;border:none;color:var(--text);font-family:inherit;font-size:12px;outline:none;appearance:none;-webkit-appearance:none}
+.card{background:var(--s2);border:1px solid var(--b);border-radius:7px;padding:9px 11px}
+.clbl{font-size:8px;color:var(--mu);text-transform:uppercase;letter-spacing:0.13em;margin-bottom:5px}
+select,input[type=text],input[type=password]{width:100%;background:transparent;border:none;color:var(--tx);font-family:inherit;font-size:12px;outline:none;appearance:none;-webkit-appearance:none}
 select option{background:#1a1a1a}
-input::placeholder{color:var(--muted)}
-
-.btn{width:100%;padding:13px;border-radius:7px;border:1px solid var(--border2);background:transparent;color:var(--text);font-family:inherit;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:opacity 0.15s,transform 0.1s}
+input::placeholder{color:var(--mu)}
+.btn{width:100%;padding:13px;border-radius:7px;border:1px solid var(--b2);background:transparent;color:var(--tx);font-family:inherit;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:opacity 0.15s,transform 0.1s}
 .btn:active{transform:scale(0.97);opacity:0.8}
-.btn.go{background:var(--gdim);border-color:var(--green);color:var(--green)}
+.btn.go{background:var(--gdim);border-color:var(--gr);color:var(--gr)}
 .btn.stp{background:var(--rdim);border-color:var(--red);color:var(--red)}
-.btn.acc{background:var(--adim);border-color:var(--accent);color:var(--accent)}
+.btn.acc{background:var(--adim);border-color:var(--ac);color:var(--ac)}
 .btn:disabled{opacity:0.28;pointer-events:none}
 .brow{display:flex;gap:9px}
 .brow .btn{flex:1}
-
 .stats{display:flex;gap:9px}
-.stat{flex:1;background:var(--s2);border:1px solid var(--border);border-radius:7px;padding:7px 4px;text-align:center}
-.sv{font-size:15px;font-weight:700;color:var(--accent)}
-.sn{font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-top:1px}
-
-.info{background:var(--s2);border:1px solid var(--border);border-left:2px solid var(--accent);border-radius:7px;padding:11px 13px;font-size:11px;color:var(--muted2);line-height:1.75}
-.info strong{color:var(--text);font-weight:700}
-.info code{color:var(--accent);font-size:10px}
-.info.warn{border-left-color:var(--amber)}
-.info.warn strong{color:var(--amber)}
-.info.ok{border-left-color:var(--green)}
-.info.ok strong{color:var(--green)}
-.info.err{border-left-color:var(--red)}
-.info.err strong{color:var(--red)}
-
+.stat{flex:1;background:var(--s2);border:1px solid var(--b);border-radius:7px;padding:7px 4px;text-align:center}
+.sv{font-size:15px;font-weight:700;color:var(--ac)}
+.sn{font-size:8px;color:var(--mu);text-transform:uppercase;letter-spacing:0.1em;margin-top:1px}
+.info{background:var(--s2);border:1px solid var(--b);border-left:3px solid var(--ac);border-radius:7px;padding:11px 13px;font-size:11px;color:var(--mu2);line-height:1.8}
+.info strong{color:var(--tx);font-weight:700}
+.info code{color:var(--ac);font-size:10px;background:rgba(0,229,255,0.08);padding:1px 4px;border-radius:3px}
+.info.warn{border-left-color:var(--am)}
+.info.warn strong{color:var(--am)}
+.info.ok{border-left-color:var(--gr)}
+.info.ok strong{color:var(--gr)}
+.roomdisp{text-align:center;padding:10px 0;background:var(--s2);border:1px solid var(--b);border-radius:7px}
+.roomid{font-size:40px;font-weight:700;letter-spacing:0.35em;color:var(--ac);padding:0 10px}
+.roomsub{font-size:9px;color:var(--mu);letter-spacing:0.12em;margin-top:4px}
 .pinrow{display:flex;align-items:center;gap:8px}
-.pvbtn{background:none;border:none;color:var(--muted);font-family:inherit;font-size:10px;cursor:pointer;letter-spacing:0.08em;padding:0;white-space:nowrap}
-.pvbtn.on{color:var(--amber)}
-
-.roomdisp{text-align:center;padding:8px 0}
-.roomid{font-size:36px;font-weight:700;letter-spacing:0.3em;color:var(--accent)}
-.roomsub{font-size:9px;color:var(--muted);letter-spacing:0.12em;margin-top:4px}
-
-.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(70px);background:var(--accent);color:#000;font-size:11px;letter-spacing:0.09em;text-transform:uppercase;padding:9px 18px;border-radius:20px;font-weight:700;transition:transform 0.28s cubic-bezier(.175,.885,.32,1.275);pointer-events:none;z-index:999;white-space:nowrap}
+.pvbtn{background:none;border:none;color:var(--mu);font-family:inherit;font-size:10px;cursor:pointer;padding:0;white-space:nowrap}
+.sigbox{background:var(--amdim);border:1px solid var(--am);border-radius:7px;padding:11px 13px}
+.sigbox .clbl{color:var(--am)}
+.sigsaved{background:var(--gdim);border:1px solid var(--gr);border-radius:7px;padding:9px 13px;font-size:11px;color:var(--gr);display:flex;align-items:center;justify-content:space-between}
+.sigsaved span.ch{color:var(--mu);font-size:10px;cursor:pointer;text-decoration:underline}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(70px);background:var(--ac);color:#000;font-size:11px;letter-spacing:0.09em;text-transform:uppercase;padding:9px 18px;border-radius:20px;font-weight:700;transition:transform 0.28s cubic-bezier(.175,.885,.32,1.275);pointer-events:none;z-index:999;white-space:nowrap}
 .toast.show{transform:translateX(-50%) translateY(0)}
-
 #qrwrap{display:none;flex-direction:column;align-items:center;gap:8px}
-
-/* Signal server config banner */
-.cfg-banner{background:#1a1200;border:1px solid #554400;border-radius:7px;padding:10px 13px;font-size:11px;color:var(--amber);line-height:1.7}
-.cfg-banner strong{color:#ffd166}
-.cfg-banner input{background:#0d0d00;border:1px solid #554400;border-radius:4px;color:#fff;font-family:inherit;font-size:11px;padding:5px 8px;width:100%;margin-top:6px;outline:none}
-
-/* PIN lock overlay */
 #pinlock{position:fixed;inset:0;background:rgba(8,8,8,0.97);z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:32px}
-#pinlock h2{font-size:13px;color:var(--accent);letter-spacing:0.2em}
-#pinlock input{width:160px;text-align:center;font-size:24px;letter-spacing:0.3em;border-bottom:2px solid var(--accent);padding-bottom:6px;color:var(--text);background:transparent;font-family:inherit;outline:none;border-top:none;border-left:none;border-right:none}
-#pinlock .perr{font-size:11px;color:var(--red);height:16px}
-#pinlock .btn{width:160px}
+#pinlock h2{font-size:13px;color:var(--ac);letter-spacing:0.2em}
+.pinput2{width:160px;text-align:center;font-size:24px;letter-spacing:0.3em;border-bottom:2px solid var(--ac);padding-bottom:6px;color:var(--tx);background:transparent;font-family:inherit;outline:none;border-top:none;border-left:none;border-right:none}
+.perr{font-size:11px;color:var(--red);height:16px}
 </style>
 </head>
 <body>
 
 <div id="pinlock" style="display:none">
   <h2>&#128274; STREAM LOCKED</h2>
-  <p style="font-size:11px;color:var(--muted2);text-align:center">Enter the PIN set by the streamer</p>
-  <input type="password" id="pinentry" maxlength="8" placeholder="••••" inputmode="numeric">
+  <p style="font-size:11px;color:var(--mu2);text-align:center">Enter the PIN set by the streamer</p>
+  <input class="pinput2" type="password" id="pinentry" maxlength="8" placeholder="••••" inputmode="numeric">
   <div class="perr" id="pierr"></div>
-  <button class="btn acc" onclick="submitPin()">UNLOCK</button>
+  <button class="btn acc" style="width:160px" onclick="submitPin()">UNLOCK</button>
 </div>
 
 <header>
@@ -124,12 +102,12 @@ input::placeholder{color:var(--muted)}
 </header>
 
 <div class="tabs">
-  <button class="tab active" onclick="T('sender')">&#128247; SENDER</button>
-  <button class="tab" onclick="T('receiver')">&#128250; VIEWER</button>
-  <button class="tab" onclick="T('help')">&#9881; SETUP</button>
+  <button class="tab active" onclick="TAB('sender')">&#128247; SENDER</button>
+  <button class="tab" onclick="TAB('receiver')">&#128250; VIEWER</button>
+  <button class="tab" onclick="TAB('help')">&#9881; SETUP</button>
 </div>
 
-<!-- ═══ SENDER ═══ -->
+<!-- SENDER -->
 <div class="panel active" id="sender-panel">
   <div class="vidwrap">
     <video id="lv" autoplay muted playsinline></video>
@@ -142,94 +120,68 @@ input::placeholder{color:var(--muted)}
     <button class="cpybtn" onclick="copyObs()">COPY</button>
   </div>
   <div class="ctrl">
-
-    <!-- Signal server config -->
-    <div class="cfg-banner" id="sigcfg">
-      <strong>&#9888; Signal server URL required</strong><br>
-      Deploy the <code>server.js</code> to Render (free), then paste your <code>wss://</code> URL below. This is only needed for matching — video streams peer-to-peer on your LAN.
-      <input type="text" id="siginput" placeholder="wss://your-app.onrender.com" oninput="saveSig()">
+    <div class="sigbox" id="sigbox">
+      <div class="clbl">&#9888; Signal Server URL (one-time setup)</div>
+      <input type="text" id="siginput" placeholder="wss://webrtpcam.onrender.com" oninput="saveSig()" autocomplete="off" autocapitalize="off" spellcheck="false">
     </div>
-    <div class="info ok" id="sigok" style="display:none">
-      <strong>&#10003; Signal server connected</strong> — video stays on your local network.
-      <span style="color:var(--muted);font-size:10px;cursor:pointer;margin-left:8px" onclick="resetSig()">[change]</span>
+    <div class="sigsaved" id="sigok" style="display:none">
+      <span>&#10003; Signal server configured</span>
+      <span class="ch" onclick="resetSig()">change</span>
     </div>
-
     <div class="g3">
       <div class="card"><div class="clbl">Camera</div>
-        <select id="camsel" onchange="camChanged()">
-          <option value="environment">Rear</option>
-          <option value="user">Front</option>
-        </select>
+        <select id="camsel" onchange="camChanged()"><option value="environment">Rear</option><option value="user">Front</option></select>
       </div>
       <div class="card"><div class="clbl">Quality</div>
-        <select id="qualsel">
-          <option value="sd">SD 480p</option>
-          <option value="hd" selected>HD 720p</option>
-          <option value="fhd">FHD 1080p</option>
-          <option value="4k">4K 2160p</option>
-        </select>
+        <select id="qualsel"><option value="sd">SD 480p</option><option value="hd" selected>HD 720p</option><option value="fhd">FHD 1080p</option><option value="4k">4K 2160p</option></select>
       </div>
       <div class="card"><div class="clbl">FPS</div>
-        <select id="fpssel">
-          <option value="24">24</option>
-          <option value="30" selected>30</option>
-          <option value="60">60</option>
-        </select>
+        <select id="fpssel"><option value="24">24</option><option value="30" selected>30</option><option value="60">60</option></select>
       </div>
     </div>
-
     <div class="card">
       <div class="clbl">Stream PIN (optional)</div>
       <div class="pinrow">
         <input type="password" id="pininput" placeholder="Leave blank = open stream" maxlength="8" inputmode="numeric" style="flex:1">
-        <button class="pvbtn" id="pvbtn" onclick="togglePV()">SHOW</button>
+        <button class="pvbtn" onclick="togglePV()">SHOW</button>
       </div>
     </div>
-
     <div class="brow">
       <button class="btn go" id="startbtn" onclick="startStream()">&#9679; START</button>
       <button class="btn stp" id="stopbtn" onclick="stopStream()" disabled>&#9632; STOP</button>
     </div>
     <div class="brow">
-      <button class="btn" onclick="flipCam()">&#8635; FLIP</button>
-      <button class="btn" id="micbtn" onclick="toggleMic()">&#127908; MIC</button>
+      <button class="btn" onclick="flipCam()">&#8635; FLIP CAM</button>
+      <button class="btn" id="micbtn" onclick="toggleMic()">&#127908; MIC ON</button>
       <button class="btn" id="torchbtn" onclick="toggleTorch()" style="display:none">&#128294; TORCH</button>
     </div>
-
     <div class="roomdisp" id="roomdisp" style="display:none">
       <div class="roomid" id="roomidtxt">——</div>
-      <div class="roomsub">ROOM ID — enter on viewer device</div>
+      <div class="roomsub">YOUR ROOM ID — permanent, never changes</div>
     </div>
-
     <div class="stats" id="sstats" style="display:none">
       <div class="stat"><div class="sv" id="sfps">—</div><div class="sn">FPS</div></div>
       <div class="stat"><div class="sv" id="sres">—</div><div class="sn">RES</div></div>
       <div class="stat"><div class="sv" id="svwrs">0</div><div class="sn">VIEWERS</div></div>
       <div class="stat"><div class="sv" id="skbps">—</div><div class="sn">KBPS</div></div>
     </div>
-
-    <div id="qrwrap">
-      <div id="qrdiv"></div>
-      <div style="font-size:9px;color:var(--muted);letter-spacing:0.1em" id="qrlbl"></div>
-    </div>
+    <div id="qrwrap"><div id="qrdiv"></div><div style="font-size:9px;color:var(--mu);letter-spacing:0.1em;text-align:center" id="qrlbl"></div></div>
   </div>
 </div>
 
-<!-- ═══ VIEWER ═══ -->
+<!-- VIEWER -->
 <div class="panel" id="receiver-panel">
   <div class="ctrl">
-    <div class="info">
-      <strong>Connect to a stream.</strong> Make sure the sender has started streaming, then enter the Room ID shown on their device.
-    </div>
+    <div class="info ok"><strong>Auto-reconnects.</strong> Keeps retrying until sender goes live. Perfect for OBS — just leave it open.</div>
     <div class="card">
       <div class="clbl">Room ID</div>
-      <input type="text" id="roomin" placeholder="e.g. AB12CD" autocapitalize="characters" style="font-size:18px;letter-spacing:0.2em">
+      <input type="text" id="roomin" placeholder="e.g. AB12CD" autocapitalize="characters" style="font-size:20px;letter-spacing:0.25em;font-weight:700">
     </div>
     <div class="brow">
       <button class="btn acc" onclick="joinRoom()">&#9654; CONNECT</button>
       <button class="btn stp" onclick="leaveRoom()" id="leavebtn" disabled>&#9632; LEAVE</button>
     </div>
-    <div id="ridle" class="info warn"><strong>Waiting...</strong> Enter a Room ID and tap Connect.</div>
+    <div id="ridle" class="info warn"><strong>Not connected.</strong> Enter Room ID and tap Connect.</div>
     <video id="rv" autoplay playsinline style="display:none;width:100%;border-radius:8px;background:#000;max-height:55vw;object-fit:cover"></video>
     <div class="stats" id="rstats" style="display:none">
       <div class="stat"><div class="sv" id="rsfps">—</div><div class="sn">FPS</div></div>
@@ -239,415 +191,230 @@ input::placeholder{color:var(--muted)}
   </div>
 </div>
 
-<!-- ═══ HELP ═══ -->
+<!-- HELP -->
 <div class="panel" id="help-panel">
   <div class="ctrl">
     <div class="info ok">
-      <strong>How it works:</strong><br>
-      The signal server only helps your phone and OBS find each other (exchanges ~1KB of text). After that, video streams <strong>directly peer-to-peer</strong> on your local network — never through the server.
+      <strong>Room ID is permanent.</strong> It never changes so your OBS URL works forever — set it once and forget it.
     </div>
     <div class="info">
-      <strong>Deploy signal server (free, 5 min):</strong><br>
-      1. Go to <strong>render.com</strong> → New Web Service<br>
-      2. Create a GitHub repo with <code>server.js</code> + <code>package.json</code><br>
-      3. Build: <code>npm install</code> &nbsp; Start: <code>node server.js</code><br>
-      4. Copy your <code>wss://xxx.onrender.com</code> URL<br>
-      5. Paste it in the Sender tab config box
-    </div>
-    <div class="info">
-      <strong>OBS Browser Source setup:</strong><br>
-      Sources → Add → <strong>Browser Source</strong><br>
-      Paste the <strong>OBS URL</strong> from Sender tab<br>
-      Width: <code>1920</code> Height: <code>1080</code> (or 3840×2160 for 4K)<br>
-      ✓ Shutdown source when not visible<br>
-      ✓ Refresh when scene becomes active
+      <strong>First-time OBS setup:</strong><br>
+      1. Open <code>micheed.github.io/WebRTPCam</code> in Chrome on your PC<br>
+      2. Go to Sender tab → paste <code>wss://webrtpcam.onrender.com</code><br>
+      3. Start stream on your phone (Safari) to generate OBS URL<br>
+      4. In OBS: Sources → <strong>Browser Source</strong><br>
+      5. Paste OBS URL · Width <code>1920</code> · Height <code>1080</code><br>
+      6. ✓ Shutdown when not visible · ✓ Refresh on active<br>
+      <strong>Done — same URL every time.</strong>
     </div>
     <div class="info warn">
-      <strong>4K note:</strong><br>
-      iPhones cap at 1080p in Safari. Android Chrome may allow 4K on newer devices. App auto-falls back to 1080p if unsupported.
+      <strong>iPhone sender = Safari only.</strong> Apple blocks camera access in Chrome on iOS. Use Safari on your iPhone as the sender. OBS/viewer devices use any browser.
     </div>
     <div class="info warn">
-      <strong>PIN security:</strong><br>
-      PINs are SHA-256 hashed — never sent in plaintext. Protects your stream on shared networks.
+      <strong>Flip cam:</strong> Now swaps the video track without dropping the WebRTC connection. Viewers stay connected.
     </div>
     <div class="info">
-      <strong>Want true NDI?</strong><br>
-      Install <strong>obs-ndi</strong> plugin → enable OBS Virtual Camera → other LAN devices see it as an NDI source.
+      <strong>Signal server:</strong> <code>wss://webrtpcam.onrender.com</code><br>
+      Only used for initial matchmaking. Video streams peer-to-peer after that.
     </div>
   </div>
 </div>
 
 <div class="toast" id="toast"></div>
-
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
-// ─── Config ───
-const SIG_KEY = 'livecam_signal_url';
-let SIG_URL = localStorage.getItem(SIG_KEY) || '';
+const SIG_LS='lc_sig3', ROOM_LS='lc_room3';
+let SIG_URL=localStorage.getItem(SIG_LS)||'';
+let MY_ROOM=localStorage.getItem(ROOM_LS)||(()=>{const r=Math.random().toString(36).slice(2,8).toUpperCase();localStorage.setItem(ROOM_LS,r);return r;})();
+
+if(SIG_URL) document.getElementById('siginput').value=SIG_URL;
 updateSigUI();
 
-function saveSig() {
-  SIG_URL = document.getElementById('siginput').value.trim();
-  localStorage.setItem(SIG_KEY, SIG_URL);
-  updateSigUI();
-}
-function resetSig() {
-  SIG_URL = ''; localStorage.removeItem(SIG_KEY);
-  document.getElementById('siginput').value = '';
-  updateSigUI();
-}
-function updateSigUI() {
-  const ok = SIG_URL.startsWith('wss://') || SIG_URL.startsWith('ws://');
-  document.getElementById('sigcfg').style.display = ok ? 'none' : 'block';
-  document.getElementById('sigok').style.display = ok ? 'block' : 'none';
-  if(!ok && document.getElementById('siginput').value === '') {
-    document.getElementById('siginput').value = SIG_URL;
+function saveSig(){SIG_URL=document.getElementById('siginput').value.trim();localStorage.setItem(SIG_LS,SIG_URL);updateSigUI();}
+function resetSig(){SIG_URL='';localStorage.removeItem(SIG_LS);document.getElementById('siginput').value='';updateSigUI();}
+function updateSigUI(){const ok=SIG_URL.startsWith('wss://')||SIG_URL.startsWith('ws://');document.getElementById('sigbox').style.display=ok?'none':'block';document.getElementById('sigok').style.display=ok?'flex':'none';}
+
+let localStream=null,pcs={},senderWs=null,pinHash='',micOn=true,torchOn=false,facingMode='environment',isStreaming=false;
+let statsT=null,kbpsT=null,lastBytes=0,viewerPc=null,viewerWs=null,viewerRetry=null,viewerActive=false,pendingPinRoom='',pendingPinHash='';
+
+const ICE={iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'}]};
+const QUAL={sd:{w:640,h:480},hd:{w:1280,h:720},fhd:{w:1920,h:1080},'4k':{w:3840,h:2160}};
+
+function TAB(n){document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));['sender','receiver','help'].forEach((x,i)=>{if(x===n){document.querySelectorAll('.tab')[i].classList.add('active');document.getElementById(x+'-panel').classList.add('active');}});}
+
+async function hashPin(p){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('lc:'+p));return Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,'0')).join('').slice(0,16);}
+
+function wsOpen(onO,onM,onC){const s=new WebSocket(SIG_URL);s.onopen=onO;s.onmessage=e=>{try{onM(JSON.parse(e.data));}catch{}};s.onerror=()=>{};s.onclose=()=>{if(onC)onC();};return s;}
+function wsSend(s,o){if(s?.readyState===1)s.send(JSON.stringify(o));}
+
+async function startStream(){
+  if(!SIG_URL){showToast('PASTE SIGNAL SERVER URL FIRST');return;}
+  const q=document.getElementById('qualsel').value,fps=parseInt(document.getElementById('fpssel').value),d=QUAL[q],pv=document.getElementById('pininput').value.trim();
+  try{localStream=await navigator.mediaDevices.getUserMedia({video:{facingMode,width:{ideal:d.w},height:{ideal:d.h},frameRate:{ideal:fps}},audio:micOn});}
+  catch(e){
+    if(q==='4k'){showToast('4K FAILED — TRYING 1080P');document.getElementById('qualsel').value='fhd';
+      try{localStream=await navigator.mediaDevices.getUserMedia({video:{facingMode,width:{ideal:1920},height:{ideal:1080},frameRate:{ideal:fps}},audio:micOn});}catch(e2){showToast('CAM ERROR: '+e2.message.slice(0,40));return;}
+    }else{showToast('CAM ERROR: '+e.message.slice(0,40));return;}
   }
-}
-
-// ─── State ───
-let localStream = null, pcs = {}, ws = null, roomId = null;
-let pinHash = '', micOn = true, torchOn = false, facingMode = 'environment';
-let statsTimer = null, kbpsTimer = null, lastBytes = 0, isStreaming = false;
-let viewerPc = null, viewerWs = null;
-
-const ICE = { iceServers: [
-  { urls: 'stun:stun.l.google.com:19302' },
-  { urls: 'stun:stun1.l.google.com:19302' }
-]};
-const QUAL = {
-  sd:{w:640,h:480}, hd:{w:1280,h:720},
-  fhd:{w:1920,h:1080}, '4k':{w:3840,h:2160}
-};
-
-// ─── Tabs ───
-function T(name) {
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
-  ['sender','receiver','help'].forEach((n,i)=>{
-    if(n===name){document.querySelectorAll('.tab')[i].classList.add('active');document.getElementById(n+'-panel').classList.add('active');}
-  });
-}
-
-function genId(){return Math.random().toString(36).slice(2,8).toUpperCase();}
-
-// ─── PIN hash ───
-async function hashPin(pin){
-  const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('livecam:'+pin));
-  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('').slice(0,16);
-}
-
-// ─── WebSocket helper ───
-function openWS(onOpen, onMsg) {
-  const sock = new WebSocket(SIG_URL);
-  sock.onopen = onOpen;
-  sock.onmessage = e => { try { onMsg(JSON.parse(e.data)); } catch{} };
-  sock.onerror = () => showToast('SIGNAL SERVER ERROR');
-  sock.onclose = () => {};
-  return sock;
-}
-function wsSend(sock, obj) { if(sock?.readyState===1) sock.send(JSON.stringify(obj)); }
-
-// ─── START STREAM ───
-async function startStream() {
-  if(!SIG_URL.startsWith('wss://') && !SIG_URL.startsWith('ws://')) {
-    showToast('PASTE SIGNAL SERVER URL FIRST'); T('sender'); return;
-  }
-  const q = document.getElementById('qualsel').value;
-  const fps = parseInt(document.getElementById('fpssel').value);
-  const d = QUAL[q];
-  const pinVal = document.getElementById('pininput').value.trim();
-
-  try {
-    localStream = await navigator.mediaDevices.getUserMedia({
-      video:{facingMode,width:{ideal:d.w},height:{ideal:d.h},frameRate:{ideal:fps}},
-      audio:micOn
-    });
-  } catch(e) {
-    if(q==='4k') {
-      showToast('4K UNSUPPORTED — TRYING 1080P');
-      document.getElementById('qualsel').value='fhd';
-      try {
-        localStream = await navigator.mediaDevices.getUserMedia({
-          video:{facingMode,width:{ideal:1920},height:{ideal:1080},frameRate:{ideal:fps}},audio:micOn
-        });
-      } catch(e2){showToast('CAM ERROR');return;}
-    } else { showToast('CAM ERROR: '+e.message.slice(0,50)); return; }
-  }
-
-  document.getElementById('lv').srcObject = localStream;
+  document.getElementById('lv').srcObject=localStream;
   document.getElementById('vidle').classList.add('hidden');
+  const vt=localStream.getVideoTracks()[0];
+  if(vt?.getCapabilities?.()?.torch)document.getElementById('torchbtn').style.display='';
+  pinHash=pv?await hashPin(pv):'';
+  isStreaming=true;
+  connectSenderWS();updateSenderUI(true);startStats();generateQR();
+  showToast('LIVE — ROOM: '+MY_ROOM);
+}
 
-  // Torch
-  const vt = localStream.getVideoTracks()[0];
-  if(vt?.getCapabilities?.()?.torch) document.getElementById('torchbtn').style.display='';
-
-  pinHash = pinVal ? await hashPin(pinVal) : '';
-  roomId = genId();
-  isStreaming = true;
-
-  // Open sender WS
-  ws = openWS(
-    () => { wsSend(ws,{type:'join',room:roomId,role:'sender'}); },
-    async (msg) => {
-      if(msg.type==='viewer-join') await createSenderPC(msg.viewerId);
-      if(msg.type==='answer') {
-        const pc=pcs[msg.viewerId];
-        if(pc?.signalingState==='have-local-offer') await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp)).catch(()=>{});
-      }
-      if(msg.type==='ice') {
-        const pc=pcs[msg.viewerId];
-        if(pc&&msg.candidate) await pc.addIceCandidate(new RTCIceCandidate(msg.candidate)).catch(()=>{});
-      }
-    }
+function connectSenderWS(){
+  if(senderWs)senderWs.close();
+  senderWs=wsOpen(
+    ()=>wsSend(senderWs,{type:'join',room:MY_ROOM,role:'sender',pinHash}),
+    async msg=>{
+      if(msg.type==='viewer-join')await mkSenderPC(msg.viewerId,msg.pinHash||'');
+      if(msg.type==='answer'){const pc=pcs[msg.viewerId];if(pc?.signalingState==='have-local-offer')await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp)).catch(()=>{});}
+      if(msg.type==='ice'){const pc=pcs[msg.viewerId];if(pc&&msg.candidate)await pc.addIceCandidate(new RTCIceCandidate(msg.candidate)).catch(()=>{});}
+    },
+    ()=>{if(isStreaming)setTimeout(connectSenderWS,2000);}
   );
-
-  updateSenderUI(true);
-  startStats();
-  generateQR();
-  showToast('LIVE — ROOM: '+roomId);
 }
 
-// ─── STOP STREAM ───
+async function mkSenderPC(vid,iph){
+  if(pinHash&&iph!==pinHash){wsSend(senderWs,{type:'pin-reject',room:MY_ROOM,viewerId:vid});return;}
+  if(pcs[vid]){pcs[vid].close();delete pcs[vid];}
+  const pc=new RTCPeerConnection(ICE);pcs[vid]=pc;
+  localStream.getTracks().forEach(t=>pc.addTrack(t,localStream));
+  pc.onicecandidate=e=>{if(e.candidate)wsSend(senderWs,{type:'ice',room:MY_ROOM,viewerId:vid,candidate:e.candidate,to:'viewer'});};
+  pc.onconnectionstatechange=()=>{if(['disconnected','failed','closed'].includes(pc.connectionState)){pc.close();delete pcs[vid];updateVC();}};
+  const offer=await pc.createOffer();await pc.setLocalDescription(offer);
+  wsSend(senderWs,{type:'offer',room:MY_ROOM,viewerId:vid,sdp:offer});updateVC();
+}
+function updateVC(){const n=Object.keys(pcs).length;document.getElementById('vcnt').textContent=n;document.getElementById('svwrs').textContent=n;}
+
 function stopStream(){
-  isStreaming=false;
-  if(ws){ws.close();ws=null;}
+  isStreaming=false;if(senderWs){senderWs.close();senderWs=null;}
   if(localStream){localStream.getTracks().forEach(t=>t.stop());localStream=null;}
-  Object.values(pcs).forEach(pc=>pc.close());pcs={};
-  roomId=null;
-  document.getElementById('lv').srcObject=null;
-  document.getElementById('vidle').classList.remove('hidden');
-  document.getElementById('qrwrap').style.display='none';
-  document.getElementById('roomdisp').style.display='none';
-  stopStats();updateSenderUI(false);
-  showToast('STREAM STOPPED');
+  Object.values(pcs).forEach(p=>p.close());pcs={};
+  document.getElementById('lv').srcObject=null;document.getElementById('vidle').classList.remove('hidden');
+  document.getElementById('qrwrap').style.display='none';document.getElementById('roomdisp').style.display='none';
+  stopStats();updateSenderUI(false);showToast('STREAM STOPPED');
 }
+
+function buildObsUrl(){return location.href.split('?')[0]+'?room='+MY_ROOM+'&sig='+encodeURIComponent(SIG_URL)+'&obs=1';}
 
 function updateSenderUI(on){
-  document.getElementById('startbtn').disabled=on;
-  document.getElementById('stopbtn').disabled=!on;
-  document.getElementById('sstats').style.display=on?'flex':'none';
-  document.getElementById('vbadge').classList.toggle('show',on);
+  document.getElementById('startbtn').disabled=on;document.getElementById('stopbtn').disabled=!on;
+  document.getElementById('sstats').style.display=on?'flex':'none';document.getElementById('vbadge').classList.toggle('show',on);
   document.getElementById('roomdisp').style.display=on?'block':'none';
-  const pill=document.getElementById('spill');
-  document.getElementById('stxt').textContent=on?'LIVE':'IDLE';
-  pill.className='pill'+(on?' live':'');
-  if(on&&roomId){
-    document.getElementById('roomidtxt').textContent=roomId;
-    document.getElementById('obsurl').textContent=location.href.split('?')[0]+'?room='+roomId+'&obs=1';
-  } else {
-    document.getElementById('obsurl').textContent='— start stream first —';
-  }
+  document.getElementById('spill').className='pill'+(on?' live':'');document.getElementById('stxt').textContent=on?'LIVE':'IDLE';
+  document.getElementById('obsurl').textContent=on?buildObsUrl():'— start stream first —';
+  if(on)document.getElementById('roomidtxt').textContent=MY_ROOM;
 }
 
-async function createSenderPC(viewerId){
-  // PIN check happens on viewer side before joining — we verify here too
-  const pc=new RTCPeerConnection(ICE);
-  pcs[viewerId]=pc;
-  localStream.getTracks().forEach(t=>pc.addTrack(t,localStream));
-  pc.onicecandidate=e=>{if(e.candidate)wsSend(ws,{type:'ice',room:roomId,viewerId,candidate:e.candidate,to:'viewer'});};
-  pc.onconnectionstatechange=()=>{
-    if(['disconnected','failed','closed'].includes(pc.connectionState)){pc.close();delete pcs[viewerId];updateVC();}
-  };
-  const offer=await pc.createOffer();
-  await pc.setLocalDescription(offer);
-  wsSend(ws,{type:'offer',room:roomId,viewerId,sdp:offer});
-  updateVC();
-}
-function updateVC(){
-  const n=Object.keys(pcs).length;
-  document.getElementById('vcnt').textContent=n;
-  document.getElementById('svwrs').textContent=n;
-}
-
-// ─── JOIN ROOM (Viewer) ───
-async function joinRoom(){
-  const rid=document.getElementById('roomin').value.trim().toUpperCase();
-  if(!rid){showToast('ENTER ROOM ID');return;}
-  if(!SIG_URL.startsWith('wss://')&&!SIG_URL.startsWith('ws://')){showToast('NO SIGNAL SERVER — SEE SETUP TAB');T('help');return;}
-
-  // Show PIN prompt if needed — we ask optimistically and send hash
-  // Actually we don't know if room has PIN yet, so we just connect and handle pin-reject
-  await connectViewer(rid,'');
-}
-
-async function submitPin(){
-  const lock=document.getElementById('pinlock');
-  const rid=lock.dataset.room;
-  const entered=document.getElementById('pinentry').value.trim();
-  if(!entered)return;
-  const h=await hashPin(entered);
-  lock.style.display='none';
-  await connectViewer(rid,h);
-}
-
-async function connectViewer(rid,ph){
-  if(viewerWs){viewerWs.close();viewerWs=null;}
-  if(viewerPc){viewerPc.close();viewerPc=null;}
-
-  const viewerId=genId();
-  viewerPc=new RTCPeerConnection(ICE);
-
-  viewerPc.ontrack=e=>{
-    const v=document.getElementById('rv');
-    v.srcObject=e.streams[0];v.style.display='block';
-    document.getElementById('ridle').style.display='none';
-    document.getElementById('rstats').style.display='flex';
-    showToast('CONNECTED!');startRecvStats();
-  };
-  viewerPc.onicecandidate=e=>{if(e.candidate)wsSend(viewerWs,{type:'ice',room:rid,viewerId,candidate:e.candidate,to:'sender'});};
-  viewerPc.onconnectionstatechange=()=>{
-    if(['disconnected','failed'].includes(viewerPc.connectionState))showToast('CONNECTION LOST');
-  };
-
-  viewerWs=openWS(
-    ()=>wsSend(viewerWs,{type:'join',room:rid,role:'viewer',viewerId}),
-    async(msg)=>{
-      if(msg.type==='no-sender'){showToast('NO SENDER IN ROOM — IS STREAM STARTED?');return;}
-      if(msg.type==='pin-reject'){
-        // Show PIN prompt
-        const lock=document.getElementById('pinlock');
-        lock.style.display='flex';lock.dataset.room=rid;
-        document.getElementById('pinentry').value='';document.getElementById('pierr').textContent='';
-        viewerWs.close();viewerWs=null;
-        return;
-      }
-      if(msg.type==='offer'){
-        try{
-          await viewerPc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
-          const ans=await viewerPc.createAnswer();
-          await viewerPc.setLocalDescription(ans);
-          wsSend(viewerWs,{type:'answer',room:rid,viewerId:msg.viewerId,sdp:ans});
-        }catch(e){console.error(e);}
-      }
-      if(msg.type==='ice'&&msg.candidate){
-        await viewerPc.addIceCandidate(new RTCIceCandidate(msg.candidate)).catch(()=>{});
-      }
-      if(msg.type==='sender-left')showToast('SENDER DISCONNECTED');
-    }
-  );
-
-  document.getElementById('leavebtn').disabled=false;
-  showToast('CONNECTING TO '+rid+'...');
-}
-
-function leaveRoom(){
-  if(viewerWs){viewerWs.close();viewerWs=null;}
-  if(viewerPc){viewerPc.close();viewerPc=null;}
-  document.getElementById('rv').style.display='none';
-  document.getElementById('rv').srcObject=null;
-  document.getElementById('ridle').style.display='';
-  document.getElementById('rstats').style.display='none';
-  document.getElementById('leavebtn').disabled=true;
-  showToast('DISCONNECTED');
-}
-
-// ─── Controls ───
+// KEY FIX: replaceTrack instead of restarting stream
 async function flipCam(){
   facingMode=facingMode==='environment'?'user':'environment';
   document.getElementById('camsel').value=facingMode;
-  if(isStreaming){stopStream();await startStream();}
+  if(!isStreaming)return;
+  const q=document.getElementById('qualsel').value,fps=parseInt(document.getElementById('fpssel').value),d=QUAL[q];
+  try{
+    const ns=await navigator.mediaDevices.getUserMedia({video:{facingMode,width:{ideal:d.w},height:{ideal:d.h},frameRate:{ideal:fps}},audio:false});
+    const nt=ns.getVideoTracks()[0];
+    for(const pc of Object.values(pcs)){const s=pc.getSenders().find(s=>s.track?.kind==='video');if(s)await s.replaceTrack(nt);}
+    const ot=localStream.getVideoTracks()[0];if(ot)ot.stop();
+    localStream.removeTrack(ot);localStream.addTrack(nt);
+    document.getElementById('lv').srcObject=localStream;
+    showToast('CAMERA FLIPPED — CONNECTION MAINTAINED');
+  }catch(e){showToast('FLIP ERROR: '+e.message.slice(0,30));}
 }
-async function camChanged(){
-  facingMode=document.getElementById('camsel').value;
-  if(isStreaming){stopStream();await startStream();}
-}
-function toggleMic(){
-  micOn=!micOn;
-  if(localStream)localStream.getAudioTracks().forEach(t=>t.enabled=micOn);
-  document.getElementById('micbtn').innerHTML=micOn?'&#127908; MIC':'&#128263; MUTE';
-  showToast(micOn?'MIC ON':'MUTED');
-}
-async function toggleTorch(){
-  const vt=localStream?.getVideoTracks()[0];if(!vt)return;
-  torchOn=!torchOn;
-  await vt.applyConstraints({advanced:[{torch:torchOn}]}).catch(()=>{});
-  document.getElementById('torchbtn').innerHTML=torchOn?'&#128294; ON':'&#128294; OFF';
-}
-function togglePV(){
-  const i=document.getElementById('pininput'),b=document.getElementById('pvbtn');
-  const show=i.type==='text';i.type=show?'password':'text';
-  b.textContent=show?'SHOW':'HIDE';b.classList.toggle('on',!show);
-}
+async function camChanged(){facingMode=document.getElementById('camsel').value;if(isStreaming)await flipCam();}
+function toggleMic(){micOn=!micOn;if(localStream)localStream.getAudioTracks().forEach(t=>t.enabled=micOn);document.getElementById('micbtn').innerHTML=micOn?'&#127908; MIC ON':'&#128263; MUTED';showToast(micOn?'MIC ON':'MUTED');}
+async function toggleTorch(){const vt=localStream?.getVideoTracks()[0];if(!vt)return;torchOn=!torchOn;await vt.applyConstraints({advanced:[{torch:torchOn}]}).catch(()=>{});document.getElementById('torchbtn').innerHTML=torchOn?'&#128294; ON':'&#128294; OFF';}
+function togglePV(){const i=document.getElementById('pininput');i.type=i.type==='text'?'password':'text';}
 
-// ─── Stats ───
 function startStats(){
-  statsTimer=setInterval(()=>{
-    if(!localStream)return;
-    const s=localStream.getVideoTracks()[0]?.getSettings();
-    if(s){document.getElementById('sfps').textContent=Math.round(s.frameRate||0);document.getElementById('sres').textContent=s.width?s.width+'p':'—';}
-  },1000);
-  kbpsTimer=setInterval(async()=>{
-    const pc=Object.values(pcs)[0];if(!pc)return;
-    const st=await pc.getStats();
-    st.forEach(r=>{if(r.type==='outbound-rtp'&&r.kind==='video'){const kb=Math.round((r.bytesSent-lastBytes)*8/1024);lastBytes=r.bytesSent;document.getElementById('skbps').textContent=kb>0?kb:'—';}});
-  },1000);
+  statsT=setInterval(()=>{if(!localStream)return;const s=localStream.getVideoTracks()[0]?.getSettings();if(s){document.getElementById('sfps').textContent=Math.round(s.frameRate||0);document.getElementById('sres').textContent=s.width?s.width+'p':'—';}},1000);
+  kbpsT=setInterval(async()=>{const pc=Object.values(pcs)[0];if(!pc)return;const st=await pc.getStats();st.forEach(r=>{if(r.type==='outbound-rtp'&&r.kind==='video'){const kb=Math.round((r.bytesSent-lastBytes)*8/1024);lastBytes=r.bytesSent;document.getElementById('skbps').textContent=kb>0?kb:'—';}});},1000);
 }
-function stopStats(){clearInterval(statsTimer);clearInterval(kbpsTimer);}
-let rstTimer=null;
-function startRecvStats(){
-  rstTimer=setInterval(async()=>{
-    if(!viewerPc)return;
-    const v=document.getElementById('rv');
-    if(v.videoWidth)document.getElementById('rsres').textContent=v.videoWidth+'p';
-    const st=await viewerPc.getStats();
-    st.forEach(r=>{
-      if(r.type==='inbound-rtp'&&r.kind==='video')document.getElementById('rsfps').textContent=Math.round(r.framesPerSecond||0);
-      if(r.type==='candidate-pair'&&r.state==='succeeded')document.getElementById('rsms').textContent=Math.round((r.currentRoundTripTime||0)*1000);
-    });
-  },1000);
-}
+function stopStats(){clearInterval(statsT);clearInterval(kbpsT);}
 
-// ─── QR ───
-function generateQR(){
-  if(!roomId||!window.QRCode)return;
-  const obsUrl=location.href.split('?')[0]+'?room='+roomId+'&obs=1';
-  const wrap=document.getElementById('qrwrap');
-  wrap.style.display='flex';
-  const div=document.getElementById('qrdiv');div.innerHTML='';
-  new QRCode(div,{text:obsUrl,width:180,height:180,colorDark:'#000',colorLight:'#fff',correctLevel:QRCode.CorrectLevel.M});
-  document.getElementById('qrlbl').textContent='SCAN TO CONNECT — ROOM: '+roomId;
+async function joinRoom(){
+  const rid=document.getElementById('roomin').value.trim().toUpperCase();
+  if(!rid){showToast('ENTER ROOM ID');return;}
+  if(!SIG_URL){showToast('NO SIGNAL SERVER URL — SEE SENDER TAB');return;}
+  viewerActive=true;await connectViewer(rid,'');
 }
-
-// ─── Copy ───
-function copyObs(){
-  const url=document.getElementById('obsurl').textContent;
-  if(url.includes('start stream')){showToast('START STREAM FIRST');return;}
-  navigator.clipboard.writeText(url).then(()=>showToast('COPIED!')).catch(()=>{
-    const t=document.createElement('textarea');t.value=url;document.body.appendChild(t);t.select();document.execCommand('copy');document.body.removeChild(t);showToast('COPIED!');
-  });
+async function submitPin(){
+  const entered=document.getElementById('pinentry').value.trim();if(!entered)return;
+  const h=await hashPin(entered);
+  document.getElementById('pinlock').style.display='none';
+  await connectViewer(pendingPinRoom,h);
 }
-
-// ─── Toast ───
-function showToast(msg){
-  const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'),2600);
+async function connectViewer(rid,ph){
+  clearTimeout(viewerRetry);if(viewerWs){viewerWs.close();viewerWs=null;}if(viewerPc){viewerPc.close();viewerPc=null;}
+  const vid=Math.random().toString(36).slice(2,8).toUpperCase();
+  viewerPc=new RTCPeerConnection(ICE);
+  viewerPc.ontrack=e=>{
+    const v=document.getElementById('rv');v.srcObject=e.streams[0];v.style.display='block';
+    document.getElementById('ridle').style.display='none';document.getElementById('rstats').style.display='flex';
+    showToast('CONNECTED!');startRStats();
+  };
+  viewerPc.onicecandidate=e=>{if(e.candidate)wsSend(viewerWs,{type:'ice',room:rid,viewerId:vid,candidate:e.candidate,to:'sender'});};
+  viewerPc.onconnectionstatechange=()=>{if(['disconnected','failed'].includes(viewerPc.connectionState)){showToast('RECONNECTING...');if(viewerActive)viewerRetry=setTimeout(()=>connectViewer(rid,ph),3000);}};
+  viewerWs=wsOpen(
+    ()=>wsSend(viewerWs,{type:'join',room:rid,role:'viewer',viewerId:vid,pinHash:ph}),
+    async msg=>{
+      if(msg.type==='no-sender'){if(viewerActive)viewerRetry=setTimeout(()=>connectViewer(rid,ph),3000);return;}
+      if(msg.type==='pin-reject'){pendingPinRoom=rid;pendingPinHash='';document.getElementById('pinlock').style.display='flex';document.getElementById('pinentry').value='';document.getElementById('pierr').textContent='';viewerActive=false;return;}
+      if(msg.type==='offer'){try{await viewerPc.setRemoteDescription(new RTCSessionDescription(msg.sdp));const a=await viewerPc.createAnswer();await viewerPc.setLocalDescription(a);wsSend(viewerWs,{type:'answer',room:rid,viewerId:msg.viewerId,sdp:a});}catch{}}
+      if(msg.type==='ice'&&msg.candidate)await viewerPc.addIceCandidate(new RTCIceCandidate(msg.candidate)).catch(()=>{});
+      if(msg.type==='sender-left'){showToast('SENDER OFFLINE — RETRYING...');if(viewerActive)viewerRetry=setTimeout(()=>connectViewer(rid,ph),3000);}
+    },
+    ()=>{if(viewerActive)viewerRetry=setTimeout(()=>connectViewer(rid,ph),3000);}
+  );
+  document.getElementById('leavebtn').disabled=false;
 }
+function leaveRoom(){viewerActive=false;clearTimeout(viewerRetry);if(viewerWs){viewerWs.close();viewerWs=null;}if(viewerPc){viewerPc.close();viewerPc=null;}document.getElementById('rv').style.display='none';document.getElementById('rv').srcObject=null;document.getElementById('ridle').style.display='';document.getElementById('rstats').style.display='none';document.getElementById('leavebtn').disabled=true;showToast('DISCONNECTED');}
 
-// ─── OBS HEADLESS MODE ───
+let rst=null;
+function startRStats(){if(rst)clearInterval(rst);rst=setInterval(async()=>{if(!viewerPc)return;const v=document.getElementById('rv');if(v.videoWidth)document.getElementById('rsres').textContent=v.videoWidth+'p';const st=await viewerPc.getStats();st.forEach(r=>{if(r.type==='inbound-rtp'&&r.kind==='video')document.getElementById('rsfps').textContent=Math.round(r.framesPerSecond||0);if(r.type==='candidate-pair'&&r.state==='succeeded')document.getElementById('rsms').textContent=Math.round((r.currentRoundTripTime||0)*1000);});},1000);}
+
+function generateQR(){const wrap=document.getElementById('qrwrap');wrap.style.display='flex';const div=document.getElementById('qrdiv');div.innerHTML='';if(window.QRCode)new QRCode(div,{text:buildObsUrl(),width:180,height:180,colorDark:'#000',colorLight:'#fff',correctLevel:QRCode.CorrectLevel.M});document.getElementById('qrlbl').textContent='SCAN TO CONNECT · ROOM: '+MY_ROOM;}
+function copyObs(){const u=document.getElementById('obsurl').textContent;if(u.includes('start')){showToast('START STREAM FIRST');return;}navigator.clipboard.writeText(u).then(()=>showToast('COPIED!')).catch(()=>{const t=document.createElement('textarea');t.value=u;document.body.appendChild(t);t.select();document.execCommand('copy');document.body.removeChild(t);showToast('COPIED!');});}
+function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2800);}
+
+// OBS HEADLESS — sig URL embedded in query param so no config needed
 const P=new URLSearchParams(location.search);
 if(P.get('obs')==='1'&&P.get('room')){
-  const r=P.get('room');
-  const sigUrl=localStorage.getItem(SIG_KEY);
-  if(!sigUrl){document.body.innerHTML='<div style="color:#ff3b3b;font-family:monospace;padding:20px">No signal server configured. Open the app normally and add your wss:// URL first.</div>';} 
-  else {
-    document.body.innerHTML='<video autoplay playsinline id="ov" style="width:100vw;height:100vh;object-fit:cover;background:#000;display:block"></video>';
-    const pc2=new RTCPeerConnection(ICE);
-    pc2.ontrack=e=>{document.getElementById('ov').srcObject=e.streams[0];};
-    const vid2=genId();
-    const ws2=new WebSocket(sigUrl);
-    ws2.onopen=()=>ws2.send(JSON.stringify({type:'join',room:r,role:'viewer',viewerId:vid2}));
-    ws2.onmessage=async e=>{
-      const msg=JSON.parse(e.data);
-      if(msg.type==='pin-reject'){const p=prompt('PIN:');if(p){const h=await hashPin(p);ws2.close();location.reload();}}
-      if(msg.type==='offer'){
-        await pc2.setRemoteDescription(new RTCSessionDescription(msg.sdp));
-        const ans=await pc2.createAnswer();await pc2.setLocalDescription(ans);
-        ws2.send(JSON.stringify({type:'answer',room:r,viewerId:msg.viewerId,sdp:ans}));
-      }
-      if(msg.type==='ice'&&msg.candidate)await pc2.addIceCandidate(new RTCIceCandidate(msg.candidate)).catch(()=>{});
-    };
-    pc2.onicecandidate=e=>{if(e.candidate)ws2.send(JSON.stringify({type:'ice',room:r,viewerId:vid2,candidate:e.candidate,to:'sender'}));};
+  const r=P.get('room'),sigP=decodeURIComponent(P.get('sig')||''),sigSaved=localStorage.getItem(SIG_LS)||'';
+  const sigUse=sigP||sigSaved;
+  if(!sigUse){document.body.innerHTML='<div style="color:#ff3b3b;font-family:monospace;padding:30px">No signal server URL. Copy the OBS URL from the Sender tab after starting your stream.</div>';}
+  else{
+    if(sigP)localStorage.setItem(SIG_LS,sigP);
+    document.body.innerHTML='<video autoplay playsinline id="ov" style="width:100vw;height:100vh;object-fit:cover;background:#000;display:block"></video><div id="st" style="position:fixed;top:10px;left:10px;font-family:monospace;font-size:11px;color:rgba(255,255,255,0.35);letter-spacing:0.1em">CONNECTING...</div>';
+    let op=null,ow=null,oa=true;
+    async function oConn(ph){
+      if(ow)ow.close();if(op)op.close();
+      const vid=Math.random().toString(36).slice(2,8).toUpperCase();
+      op=new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'}]});
+      op.ontrack=e=>{document.getElementById('ov').srcObject=e.streams[0];document.getElementById('st').textContent='● LIVE';document.getElementById('st').style.color='rgba(0,255,136,0.5)';};
+      op.onicecandidate=e=>{if(e.candidate)oSend({type:'ice',room:r,viewerId:vid,candidate:e.candidate,to:'sender'});};
+      op.onconnectionstatechange=()=>{if(['disconnected','failed'].includes(op.connectionState)){document.getElementById('st').textContent='RECONNECTING...';if(oa)setTimeout(()=>oConn(ph),3000);}};
+      ow=new WebSocket(sigUse);
+      ow.onopen=()=>oSend({type:'join',room:r,role:'viewer',viewerId:vid,pinHash:ph});
+      ow.onmessage=async e=>{
+        const m=JSON.parse(e.data);
+        if(m.type==='no-sender'){document.getElementById('st').textContent='WAITING FOR SENDER...';if(oa)setTimeout(()=>oConn(ph),3000);return;}
+        if(m.type==='pin-reject'){const p=prompt('Stream PIN:');if(p){const h=await hashPin(p);oConn(h);}return;}
+        if(m.type==='offer'){await op.setRemoteDescription(new RTCSessionDescription(m.sdp));const a=await op.createAnswer();await op.setLocalDescription(a);oSend({type:'answer',room:r,viewerId:m.viewerId,sdp:a});}
+        if(m.type==='ice'&&m.candidate)await op.addIceCandidate(new RTCIceCandidate(m.candidate)).catch(()=>{});
+        if(m.type==='sender-left'){document.getElementById('st').textContent='SENDER OFFLINE — RETRYING...';if(oa)setTimeout(()=>oConn(ph),3000);}
+      };
+      ow.onerror=()=>{if(oa)setTimeout(()=>oConn(ph),5000);};
+      ow.onclose=()=>{if(oa)setTimeout(()=>oConn(ph),3000);};
+      function oSend(o){if(ow?.readyState===1)ow.send(JSON.stringify(o));}
+    }
+    oConn('');
   }
 }
 </script>
