@@ -39,6 +39,17 @@ function isRateLimited(ip) {
   return rateLimits[ip].count > RATE_MAX;
 }
 
+// WS-level heartbeat — detects half-dead sockets (e.g. phone switched networks
+// without a clean close) and terminates them so the app-level reconnect logic
+// on the client kicks in promptly instead of hanging on a zombie connection.
+setInterval(() => {
+  wss.clients.forEach((ws) => {
+    if (ws._alive === false) { ws.terminate(); return; }
+    ws._alive = false;
+    ws.ping();
+  });
+}, 25000); // well under the ~30-60s idle timeout most proxies/hosts use
+
 // Clean up stale rooms every 5 minutes
 setInterval(() => {
   const now = Date.now();
@@ -63,6 +74,8 @@ wss.on('connection', (ws, req) => {
   ws._role = null;
   ws._vid = null;
   ws._ip = getIP(req);
+  ws._alive = true;
+  ws.on('pong', () => { ws._alive = true; });
 
   ws.on('message', (raw) => {
     // Rate limit
@@ -78,6 +91,10 @@ wss.on('connection', (ws, req) => {
     try { msg = JSON.parse(raw); } catch { return; }
 
     const { type, room, role, viewerId } = msg;
+
+    // App-level heartbeat — keeps the connection warm through proxies that only
+    // count real data frames as activity (not just WS ping/pong control frames)
+    if (type === 'ping') { send(ws, { type: 'pong' }); return; }
 
     // Validate room ID format (6 uppercase alphanumeric chars)
     if (room && !/^[A-Z0-9]{6}$/.test(room)) {
