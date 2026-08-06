@@ -318,14 +318,7 @@ let statsT=null, kbpsT=null, lastBytes=0;
 let viewerPc=null, viewerWs=null, viewerRetry=null, viewerActive=false;
 let pendingViewerRoom='', pendingViewerPin='';
 
-const ICE = { iceServers: [
-  { urls: 'stun:stun.l.google.com:19302' },
-  { urls: 'stun:stun1.l.google.com:19302' },
-  // TURN relay fallback — needed when STUN can't punch through (common on cellular / restrictive WiFi)
-  { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
-  { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
-  { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
-] };
+const ICE = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] };
 const QUAL = { sd:{w:640,h:480}, hd:{w:1280,h:720}, fhd:{w:1920,h:1080}, '4k':{w:3840,h:2160} };
 
 function TAB(n) {
@@ -336,11 +329,10 @@ function TAB(n) {
 
 function wsOpen(url, onO, onM, onC) {
   const s = new WebSocket(url);
-  let hb = null;
-  s.onopen = () => { hb = setInterval(() => wsSend(s, { type:'ping' }), 20000); onO(); };
+  s.onopen = onO;
   s.onmessage = e => { try { onM(JSON.parse(e.data)); } catch {} };
   s.onerror = () => {};
-  s.onclose = () => { clearInterval(hb); if (onC) onC(); };
+  s.onclose = () => { if (onC) onC(); };
   return s;
 }
 function wsSend(s, o) { if (s?.readyState === 1) s.send(JSON.stringify(o)); }
@@ -656,13 +648,12 @@ if (P.get('obs')==='1' && P.get('room')) {
     async function oConn() {
       if(ow)ow.close(); if(op)op.close();
       const vid=genId(8);
-      op=new RTCPeerConnection(ICE);
+      op=new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]});
       op.ontrack=e=>{document.getElementById('ov').srcObject=e.streams[0];setSt('● LIVE','rgba(0,255,136,0.5)');};
       op.onicecandidate=e=>{if(e.candidate)oSend({type:'ice',room:r,viewerId:vid,candidate:e.candidate,to:'sender'});};
       op.onconnectionstatechange=()=>{if(['disconnected','failed'].includes(op.connectionState)){setSt('RECONNECTING...');if(oa)setTimeout(oConn,3000);}};
       ow=new WebSocket(sigUse);
-      let oHb=null;
-      ow.onopen=()=>{ oHb=setInterval(()=>oSend({type:'ping'}),20000); oSend({type:'join',room:r,role:'viewer',viewerId:vid}); };
+      ow.onopen=()=>oSend({type:'join',room:r,role:'viewer',viewerId:vid});
       ow.onmessage=async e=>{
         const m=JSON.parse(e.data);
         if(m.type==='no-sender'){setSt('WAITING FOR SENDER...');if(oa)setTimeout(oConn,3000);return;}
@@ -684,7 +675,7 @@ if (P.get('obs')==='1' && P.get('room')) {
         if(m.type==='sender-left'){setSt('SENDER OFFLINE — RETRYING...');if(oa)setTimeout(oConn,3000);}
       };
       ow.onerror=()=>{if(oa)setTimeout(oConn,5000);};
-      ow.onclose=()=>{clearInterval(oHb);if(oa)setTimeout(oConn,3000);};
+      ow.onclose=()=>{if(oa)setTimeout(oConn,3000);};
       function oSend(o){if(ow?.readyState===1)ow.send(JSON.stringify(o));}
     }
     oConn();
