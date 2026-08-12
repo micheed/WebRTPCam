@@ -287,10 +287,23 @@ function shuffleRoomId() {
 }
 loadRoomId();
 
-function saveSig() { SIG_URL = document.getElementById('siginput').value.trim(); localStorage.setItem(SIG_LS, SIG_URL); updateSigUI(); }
+function isValidSigUrl(u) {
+  try { const p = new URL(u); return p.protocol === 'ws:' || p.protocol === 'wss:'; }
+  catch { return false; }
+}
+function saveSig() {
+  const raw = document.getElementById('siginput').value.trim();
+  if (!isValidSigUrl(raw)) {
+    showToast('INVALID URL — must look like wss://yourserver.onrender.com', 6000);
+    return;
+  }
+  SIG_URL = raw;
+  localStorage.setItem(SIG_LS, SIG_URL);
+  updateSigUI();
+}
 function resetSig() { SIG_URL = ''; localStorage.removeItem(SIG_LS); document.getElementById('siginput').value = ''; updateSigUI(); }
 function updateSigUI() {
-  const ok = SIG_URL.startsWith('wss://') || SIG_URL.startsWith('ws://');
+  const ok = isValidSigUrl(SIG_URL);
   document.getElementById('sigbox').style.display = ok ? 'none' : 'block';
   document.getElementById('sigok').style.display = ok ? 'flex' : 'none';
 }
@@ -363,7 +376,13 @@ function TAB(n) {
 }
 
 function wsOpen(url, onO, onM, onC) {
-  const s = new WebSocket(url);
+  let s;
+  try {
+    s = new WebSocket(url);
+  } catch (e) {
+    showToast('CANNOT CONNECT — SIGNAL URL IS INVALID. TAP "CHANGE" AND RE-ENTER IT.', 8000);
+    return null;
+  }
   let hb = null;
   s.onopen = () => { hb = setInterval(() => wsSend(s, { type:'ping' }), 20000); onO(); };
   s.onmessage = e => { try { onM(JSON.parse(e.data)); } catch {} };
@@ -375,7 +394,7 @@ function wsSend(s, o) { if (s?.readyState === 1) s.send(JSON.stringify(o)); }
 
 // ── START STREAM ──
 async function startStream() {
-  if (!SIG_URL) { showToast('PASTE SIGNAL SERVER URL FIRST'); return; }
+  if (!isValidSigUrl(SIG_URL)) { showToast('SIGNAL SERVER URL MISSING OR INVALID — TAP "CHANGE" TO FIX IT', 6000); return; }
   const q = document.getElementById('qualsel').value;
   const fps = parseInt(document.getElementById('fpssel').value);
   const d = QUAL[q];
