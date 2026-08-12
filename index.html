@@ -401,25 +401,29 @@ async function startStream() {
   document.getElementById('lv').srcObject = localStream;
   document.getElementById('vidle').classList.add('hidden');
 
-  const vt = localStream.getVideoTracks()[0];
-  if (vt?.getCapabilities?.()?.torch) document.getElementById('torchbtn').style.display = '';
-  watchTrack(vt);
-  watchTrack(localStream.getAudioTracks()[0]);
-  acquireWakeLock();
+  try {
+    const vt = localStream.getVideoTracks()[0];
+    if (vt?.getCapabilities?.()?.torch) document.getElementById('torchbtn').style.display = '';
+    watchTrack(vt);
+    watchTrack(localStream.getAudioTracks()[0]);
+    acquireWakeLock();
 
-  // Use the Room ID field — user-set and persisted, falls back to a fresh random one if invalid/empty
-  const ridEl = document.getElementById('roomidinput');
-  let rid = (ridEl.value || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-  if (!/^[A-Z0-9]{6}$/.test(rid)) { rid = genId(6); ridEl.value = rid; }
-  localStorage.setItem(ROOM_LS, rid);
-  sessionRoomId = rid;
-  isStreaming = true;
+    // Use the Room ID field — user-set and persisted, falls back to a fresh random one if invalid/empty
+    const ridEl = document.getElementById('roomidinput');
+    let rid = (ridEl.value || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (!/^[A-Z0-9]{6}$/.test(rid)) { rid = genId(6); ridEl.value = rid; }
+    localStorage.setItem(ROOM_LS, rid);
+    sessionRoomId = rid;
+    isStreaming = true;
 
-  connectSenderWS();
-  updateSenderUI(true);
-  startStats();
-  generateQR();
-  showToast('LIVE — ROOM: ' + sessionRoomId);
+    connectSenderWS();
+    updateSenderUI(true);
+    startStats();
+    generateQR();
+    showToast('LIVE — ROOM: ' + sessionRoomId);
+  } catch (e) {
+    showToast('SETUP ERROR: ' + String(e.message||e).slice(0,70), 8000);
+  }
 }
 
 function connectSenderWS() {
@@ -755,7 +759,11 @@ function copyObs() {
   navigator.clipboard.writeText(u).then(()=>showToast('COPIED!')).catch(()=>{const t=document.createElement('textarea');t.value=u;document.body.appendChild(t);t.select();document.execCommand('copy');document.body.removeChild(t);showToast('COPIED!');});
 }
 
-function showToast(m) { const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2800); }
+function showToast(m, ms=2800) { const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),ms); }
+
+// Surface silent failures on-screen — no console access needed on iPhone.
+window.addEventListener('error', e => { showToast('JS ERROR: ' + String(e.message||'unknown').slice(0,70), 8000); });
+window.addEventListener('unhandledrejection', e => { showToast('PROMISE ERROR: ' + String(e.reason?.message||e.reason||'unknown').slice(0,70), 8000); });
 
 // ── OBS HEADLESS MODE ──
 const P = new URLSearchParams(location.search);
