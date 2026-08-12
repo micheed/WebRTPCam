@@ -147,6 +147,14 @@ input::placeholder{color:var(--mu)}
       </div>
     </div>
 
+    <div class="card">
+      <div class="clbl">&#128260; Room ID — reuse it across sessions, or shuffle for a new one</div>
+      <div class="pinrow">
+        <input type="text" id="roomidinput" maxlength="6" placeholder="AUTO" autocomplete="off" autocapitalize="characters" spellcheck="false" oninput="onRoomIdInput()" style="flex:1;text-transform:uppercase;letter-spacing:2px">
+        <button class="pvbtn" onclick="shuffleRoomId()">SHUFFLE</button>
+      </div>
+    </div>
+
     <!-- PIN: encrypted client-side, never sent to server -->
     <div class="card">
       <div class="clbl">&#128274; Stream PIN — encrypted locally, never sent to server</div>
@@ -168,7 +176,7 @@ input::placeholder{color:var(--mu)}
 
     <div class="roomdisp" id="roomdisp" style="display:none">
       <div class="roomid" id="roomidtxt">——</div>
-      <div class="roomsub">SESSION ROOM ID — changes each stream</div>
+      <div class="roomsub">SESSION ROOM ID</div>
     </div>
 
     <div class="stats" id="sstats" style="display:none">
@@ -258,6 +266,26 @@ const SIG_LS = 'lc_sig4';
 let SIG_URL = localStorage.getItem(SIG_LS) || '';
 if (SIG_URL) document.getElementById('siginput').value = SIG_URL;
 updateSigUI();
+
+const ROOM_LS = 'lc_room_id';
+function loadRoomId() {
+  const saved = (localStorage.getItem(ROOM_LS) || '').toUpperCase();
+  const id = /^[A-Z0-9]{6}$/.test(saved) ? saved : genId(6);
+  document.getElementById('roomidinput').value = id;
+  localStorage.setItem(ROOM_LS, id);
+}
+function onRoomIdInput() {
+  const el = document.getElementById('roomidinput');
+  el.value = el.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
+  if (/^[A-Z0-9]{6}$/.test(el.value)) localStorage.setItem(ROOM_LS, el.value);
+}
+function shuffleRoomId() {
+  const id = genId(6);
+  document.getElementById('roomidinput').value = id;
+  localStorage.setItem(ROOM_LS, id);
+  showToast('NEW ROOM ID: ' + id);
+}
+loadRoomId();
 
 function saveSig() { SIG_URL = document.getElementById('siginput').value.trim(); localStorage.setItem(SIG_LS, SIG_URL); updateSigUI(); }
 function resetSig() { SIG_URL = ''; localStorage.removeItem(SIG_LS); document.getElementById('siginput').value = ''; updateSigUI(); }
@@ -376,9 +404,15 @@ async function startStream() {
   const vt = localStream.getVideoTracks()[0];
   if (vt?.getCapabilities?.()?.torch) document.getElementById('torchbtn').style.display = '';
   watchTrack(vt);
+  watchTrack(localStream.getAudioTracks()[0]);
+  acquireWakeLock();
 
-  // New random room ID each session
-  sessionRoomId = genId(6);
+  // Use the Room ID field — user-set and persisted, falls back to a fresh random one if invalid/empty
+  const ridEl = document.getElementById('roomidinput');
+  let rid = (ridEl.value || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (!/^[A-Z0-9]{6}$/.test(rid)) { rid = genId(6); ridEl.value = rid; }
+  localStorage.setItem(ROOM_LS, rid);
+  sessionRoomId = rid;
   isStreaming = true;
 
   connectSenderWS();
@@ -441,6 +475,7 @@ function updateVC() {
 
 function stopStream() {
   isStreaming = false;
+  releaseWakeLock();
   if (senderWs) { senderWs.close(); senderWs = null; }
   if (localStream) { localStream.getTracks().forEach(t=>t.stop()); localStream = null; }
   Object.values(pcs).forEach(p=>p.close()); pcs = {};
@@ -469,16 +504,18 @@ function updateSenderUI(on) {
   if (on) document.getElementById('roomidtxt').textContent = sessionRoomId;
 }
 
-// ── CAMERA AUTO-RECOVERY ──
-// A track can die silently (OS reclaims the camera, phone locks, tab backgrounds)
-// without the peer connection or UI knowing. This restarts getUserMedia and
-// hot-swaps the new track into every active connection via replaceTrack —
-// no renegotiation, no visible drop for viewers beyond a brief freeze.
+// ── CAMERA + MIC AUTO-RECOVERY ──
+// A track can die silently (OS reclaims the camera/mic, phone locks, tab backgrounds)
+// without the peer connection or UI knowing — this can happen to video and audio
+// independently (e.g. a phone call interrupts the mic but not the camera).
+// This restarts getUserMedia and hot-swaps the new tracks into every active
+// connection via replaceTrack — no renegotiation, no visible drop for viewers
+// beyond a brief freeze/silence.
 let recovering = false;
 
-function watchTrack(vt) {
-  if (!vt) return;
-  vt.onended = () => { if (isStreaming) recoverCamera('track ended'); };
+function watchTrack(t) {
+  if (!t) return;
+  t.onended = () => { if (isStreaming) recoverCamera('track ended: ' + t.kind); };
 }
 
 async function recoverCamera(reason) {
@@ -512,6 +549,7 @@ async function recoverCamera(reason) {
       const capTorch = nvt.getCapabilities?.()?.torch;
       document.getElementById('torchbtn').style.display = capTorch ? '' : 'none';
       watchTrack(nvt);
+      watchTrack(nat);
       showToast('CAMERA RECONNECTED');
       recovering = false;
       return;
@@ -523,12 +561,29 @@ async function recoverCamera(reason) {
   if (isStreaming) showToast('CAMERA UNAVAILABLE — CHECK PERMISSIONS');
 }
 
+// ── SCREEN WAKE LOCK ──
+// Keeps the screen (and camera) from sleeping mid-stream. The browser auto-releases
+// this the moment the tab is hidden, so it has to be re-requested on every foreground
+// while streaming — handled in the visibilitychange listener below.
+let wakeLock = null;
+async function acquireWakeLock() {
+  if (!('wakeLock' in navigator)) return;
+  try {
+    wakeLock = await navigator.wakeLock.request('screen');
+    wakeLock.addEventListener('release', () => { wakeLock = null; });
+  } catch (e) { /* denied, unsupported, or backgrounded — nothing more to do here */ }
+}
+function releaseWakeLock() {
+  if (wakeLock) { wakeLock.release().catch(()=>{}); wakeLock = null; }
+}
+
 // iOS often reclaims the camera on lock/background WITHOUT firing track.onended —
 // so double-check the moment the tab comes back to the foreground.
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && isStreaming) {
     const vt = localStream?.getVideoTracks()[0];
     if (!vt || vt.readyState === 'ended') recoverCamera('visibility check');
+    if (!wakeLock) acquireWakeLock();
   }
 });
 
