@@ -117,6 +117,7 @@ input::placeholder{color:var(--mu)}
 <div class="panel active" id="sender-panel">
   <div class="vidwrap">
     <video id="lv" autoplay muted playsinline></video>
+    <canvas id="zoomcanvas" style="display:none;width:100%;height:100%;object-fit:cover"></canvas>
     <div class="vidle" id="vidle"><div class="vidle-icon">&#128247;</div><div class="vidle-txt">TAP START TO PREVIEW</div></div>
     <div class="vbadge" id="vbadge">&#128065; <span id="vcnt">0</span></div>
   </div>
@@ -172,6 +173,11 @@ input::placeholder{color:var(--mu)}
       <button class="btn" onclick="flipCam()">&#8635; FLIP CAM</button>
       <button class="btn" id="micbtn" onclick="toggleMic()">&#127908; MIC ON</button>
       <button class="btn" id="torchbtn" onclick="toggleTorch()" style="display:none">&#128294; TORCH</button>
+    </div>
+
+    <div class="card" id="zoomrow" style="display:none">
+      <div class="clbl">&#128269; Zoom — <span id="zoomval">1.0x</span></div>
+      <input type="range" id="zoomrange" min="1" max="4" step="0.1" value="1" style="width:100%" oninput="setZoom(this.value)">
     </div>
 
     <div class="roomdisp" id="roomdisp" style="display:none">
@@ -426,6 +432,8 @@ async function startStream() {
     watchTrack(vt);
     watchTrack(localStream.getAudioTracks()[0]);
     acquireWakeLock();
+    detectZoom(vt);
+    resetZoomUI();
 
     // Use the Room ID field — user-set and persisted, falls back to a fresh random one if invalid/empty
     const ridEl = document.getElementById('roomidinput');
@@ -470,6 +478,10 @@ async function mkSenderPC(viewerId) {
   const pc = new RTCPeerConnection(ICE);
   pcs[viewerId] = pc;
   localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+  if (zoomTrack && zoomLevel > 1.001 && !zoomNative) {
+    const s = pc.getSenders().find(s => s.track?.kind === 'video');
+    if (s) await s.replaceTrack(zoomTrack).catch(()=>{});
+  }
   pc.onicecandidate = e => { if(e.candidate) wsSend(senderWs,{type:'ice',room:sessionRoomId,viewerId,candidate:e.candidate,to:'viewer'}); };
   pc.onconnectionstatechange = () => {
     if (['disconnected','failed','closed'].includes(pc.connectionState)) { pc.close(); delete pcs[viewerId]; updateVC(); }
@@ -503,6 +515,11 @@ function stopStream() {
   if (localStream) { localStream.getTracks().forEach(t=>t.stop()); localStream = null; }
   Object.values(pcs).forEach(p=>p.close()); pcs = {};
   sessionRoomId = null;
+  if (zoomRAFId) { cancelAnimationFrame(zoomRAFId); zoomRAFId = null; }
+  if (zoomTrack) { zoomTrack.stop(); zoomTrack = null; }
+  document.getElementById('lv').style.display = '';
+  document.getElementById('zoomcanvas').style.display = 'none';
+  document.getElementById('zoomrow').style.display = 'none';
   document.getElementById('lv').srcObject = null;
   document.getElementById('vidle').classList.remove('hidden');
   document.getElementById('qrwrap').style.display = 'none';
@@ -536,6 +553,91 @@ function updateSenderUI(on) {
 // beyond a brief freeze/silence.
 let recovering = false;
 
+// ── ZOOM — native camera zoom where supported, canvas-based digital zoom otherwise ──
+// iOS Safari essentially never exposes native zoom via getUserMedia, so the digital
+// path is what most phones will actually use. It works by drawing a cropped region
+// of the live video into a canvas and sending THAT as the outgoing track — so viewers
+// actually see the zoomed image, not just the local preview.
+let zoomLevel = 1, zoomMax = 4, zoomNative = false;
+let zoomCanvas = null, zoomCtx = null, zoomRAFId = null, zoomTrack = null;
+
+function detectZoom(vt) {
+  const caps = vt?.getCapabilities?.() || {};
+  zoomNative = !!caps.zoom;
+  zoomMax = zoomNative ? (caps.zoom.max || 5) : 4;
+  const zr = document.getElementById('zoomrange');
+  zr.min = zoomNative ? (caps.zoom.min || 1) : 1;
+  zr.max = zoomMax;
+  zr.step = zoomNative ? (caps.zoom.step || 0.1) : 0.1;
+  document.getElementById('zoomrow').style.display = '';
+}
+
+function zoomDrawLoop() {
+  const video = document.getElementById('lv');
+  if (zoomLevel <= 1.001 || !video.videoWidth) { zoomRAFId = null; return; }
+  const vw = video.videoWidth, vh = video.videoHeight;
+  const sw = vw / zoomLevel, sh = vh / zoomLevel;
+  zoomCtx.drawImage(video, (vw - sw) / 2, (vh - sh) / 2, sw, sh, 0, 0, zoomCanvas.width, zoomCanvas.height);
+  zoomRAFId = requestAnimationFrame(zoomDrawLoop);
+}
+
+// Ensures whichever output is currently correct (raw camera, natively-zoomed camera,
+// or the digital-zoom canvas) is what's actually being sent to every connected viewer.
+// Called after zoom level changes AND after any track swap (flip, auto-recovery).
+async function syncZoomOutput() {
+  const vt = localStream?.getVideoTracks()[0];
+  if (!vt) return;
+  const lvEl = document.getElementById('lv'), cvEl = document.getElementById('zoomcanvas');
+
+  if (zoomNative) {
+    await vt.applyConstraints({ advanced: [{ zoom: zoomLevel }] }).catch(() => {});
+    if (zoomTrack) { zoomTrack.stop(); zoomTrack = null; }
+    if (zoomRAFId) { cancelAnimationFrame(zoomRAFId); zoomRAFId = null; }
+    lvEl.style.display = ''; cvEl.style.display = 'none';
+    for (const pc of Object.values(pcs)) {
+      const s = pc.getSenders().find(s => s.track?.kind === 'video');
+      if (s && s.track !== vt) await s.replaceTrack(vt).catch(()=>{});
+    }
+    return;
+  }
+
+  if (zoomLevel <= 1.001) {
+    if (zoomTrack) { zoomTrack.stop(); zoomTrack = null; }
+    if (zoomRAFId) { cancelAnimationFrame(zoomRAFId); zoomRAFId = null; }
+    lvEl.style.display = ''; cvEl.style.display = 'none';
+    for (const pc of Object.values(pcs)) {
+      const s = pc.getSenders().find(s => s.track?.kind === 'video');
+      if (s) await s.replaceTrack(vt).catch(()=>{});
+    }
+  } else {
+    const q = document.getElementById('qualsel').value, d = QUAL[q];
+    if (!zoomCanvas) { zoomCanvas = cvEl; zoomCtx = zoomCanvas.getContext('2d'); }
+    zoomCanvas.width = d.w; zoomCanvas.height = d.h;
+    lvEl.style.display = 'none'; cvEl.style.display = 'block';
+    if (!zoomRAFId) zoomDrawLoop();
+    if (!zoomTrack) {
+      const fps = parseInt(document.getElementById('fpssel').value) || 30;
+      zoomTrack = zoomCanvas.captureStream(fps).getVideoTracks()[0];
+    }
+    for (const pc of Object.values(pcs)) {
+      const s = pc.getSenders().find(s => s.track?.kind === 'video');
+      if (s && s.track !== zoomTrack) await s.replaceTrack(zoomTrack).catch(()=>{});
+    }
+  }
+}
+
+async function setZoom(val) {
+  zoomLevel = parseFloat(val);
+  document.getElementById('zoomval').textContent = zoomLevel.toFixed(1) + 'x';
+  await syncZoomOutput();
+}
+
+function resetZoomUI() {
+  zoomLevel = 1;
+  document.getElementById('zoomrange').value = 1;
+  document.getElementById('zoomval').textContent = '1.0x';
+}
+
 function watchTrack(t) {
   if (!t) return;
   t.onended = () => { if (isStreaming) recoverCamera('track ended: ' + t.kind); };
@@ -556,10 +658,8 @@ async function recoverCamera(reason) {
       const nvt = ns.getVideoTracks()[0];
       const nat = ns.getAudioTracks()[0];
 
-      for (const pc of Object.values(pcs)) {
-        const vs = pc.getSenders().find(s => s.track?.kind === 'video');
-        if (vs) await vs.replaceTrack(nvt).catch(()=>{});
-        if (nat) {
+      if (nat) {
+        for (const pc of Object.values(pcs)) {
           const as = pc.getSenders().find(s => s.track?.kind === 'audio');
           if (as) await as.replaceTrack(nat).catch(()=>{});
         }
@@ -573,6 +673,8 @@ async function recoverCamera(reason) {
       document.getElementById('torchbtn').style.display = capTorch ? '' : 'none';
       watchTrack(nvt);
       watchTrack(nat);
+      detectZoom(nvt);
+      await syncZoomOutput(); // reapplies whatever zoom level was already in use to the new track
       showToast('CAMERA RECONNECTED');
       recovering = false;
       return;
@@ -619,14 +721,13 @@ async function flipCam() {
   try {
     const ns = await navigator.mediaDevices.getUserMedia({video:{facingMode,width:{ideal:d.w},height:{ideal:d.h},frameRate:{ideal:fps}},audio:false});
     const nt = ns.getVideoTracks()[0];
-    for (const pc of Object.values(pcs)) {
-      const s = pc.getSenders().find(s=>s.track?.kind==='video');
-      if (s) await s.replaceTrack(nt);
-    }
     const ot = localStream.getVideoTracks()[0]; if(ot) ot.stop();
     localStream.removeTrack(ot); localStream.addTrack(nt);
     document.getElementById('lv').srcObject = localStream;
     watchTrack(nt);
+    detectZoom(nt);
+    resetZoomUI(); // front/back cameras have different zoom ranges — start clean
+    await syncZoomOutput();
     showToast('CAMERA FLIPPED');
   } catch(e) { showToast('FLIP ERROR: ' + e.message.slice(0,30)); }
 }
